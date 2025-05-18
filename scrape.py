@@ -207,7 +207,7 @@ def scrape_comment_selenium(comment_item_element, driver, wait):
         comment_data['comment_date'] = parts[1].strip() if len(parts) > 1 else "N/A"
 
     text_element = comment_item_element.find_element(By.CLASS_NAME, 'css-0')
-    comment_data['text'] = text_element.text.strip() if text_element else "N/A"
+    comment_data['text'] = text_element.text.strip().removesuffix("\nShow less") if text_element else "N/A"
 
     comment_data['reactions'] = {}
     reactions_container_element = comment_item_element.find_element(By.CLASS_NAME, 'jsx-4095120822.actionButtons')
