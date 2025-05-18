@@ -50,13 +50,11 @@ def scrape_website_content(website_url, output_filename="scraped_data.json", coo
     all_posts_data = []
 
     try:
-        i=True
-        while i==True:
+        while True:
             try:
                 view_more_button = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'button[data-qa="showMoreBtn"]')))
                 view_more_button.click()
                 time.sleep(7)
-                # i=0
             except NoSuchElementException:
                 print("No more 'View More' buttons found. Loading complete.")
                 break
@@ -65,7 +63,7 @@ def scrape_website_content(website_url, output_filename="scraped_data.json", coo
                 break        
         all_posts_data = load_scraped_data('scraped_data.json') 
         existing_posts = load_existing_post_ids(all_posts_data)
-        posts_elements = driver.find_elements(By.CSS_SELECTOR, 'article.jsx-2490229088')
+        posts_elements = driver.find_elements(By.CSS_SELECTOR, 'article[data-qa^="journalPost"]')
 
         for post_element in posts_elements:
             post_data = {}
@@ -81,44 +79,56 @@ def scrape_website_content(website_url, output_filename="scraped_data.json", coo
             except NoSuchElementException:
                 print("No 'Read More' button found. Proceeding with visible content.")
 
-            header_element = post_element.find_element(By.CSS_SELECTOR, 'header.jsx-145e72c7529e8da0')
-            if header_element:
-                author_element = header_element.find_element(By.CLASS_NAME, 'postAuthor')
-                post_data['author_name'] = author_element.text.strip() if author_element else "N/A"
-                date_element = header_element.find_element(By.CLASS_NAME, 'postDate')
-                post_data['post_date'] = date_element.text.strip() if date_element else "N/A"
+            author_element = post_element.find_element(By.CSS_SELECTOR, 'div[data-qa^="postAuthor-"]')
+            post_data['author_name'] = author_element.text.strip() if author_element else "N/A"
+            date_element = post_element.find_element(By.CSS_SELECTOR, 'div[data-qa^="postDate-"]')
+            post_data['post_date'] = date_element.text.strip() if date_element else "N/A"
 
-            content_element = post_element.find_element(By.CLASS_NAME, 'jsx-5f4f7e8cb6c49110.postBody')
+            content_element = post_element.find_element(By.CSS_SELECTOR, 'div[data-qa^="postBody-"]')
             if content_element:
-                title_container_element = post_element.find_element(By.CLASS_NAME, 'jsx-b2917769f663cb65.postTitleContainer')
-                title_element = title_container_element.find_element(By.TAG_NAME, 'h1') if title_container_element else None
+                title_element = post_element.find_element(By.CSS_SELECTOR, 'h1[data-qa^="postTitle-"]')
                 post_data['title'] = title_element.text.strip() if title_element else "N/A"
-                print("Title: ")
-                print(post_data['title'])
-                text_element = content_element.find_element(By.CLASS_NAME, 'css-0')
-                post_data['text'] = text_element.text.strip() if text_element else "N/A"
+                text_element = content_element.find_element(By.CSS_SELECTOR, '.css-0')
+                post_data['text'] = text_element.text.strip().removesuffix("\nShow less") if text_element else "N/A"
 
                 post_data['photos'] = []
                 try:
-                    photo_elements_div = post_element.find_element(By.CSS_SELECTOR, 'div.jsx-90dd3d5d3d6464a0.quadLayout')
+                    photo_elements_div = post_element.find_element(By.CLASS_NAME, 'quadLayout')
                     if photo_elements_div:
                         photo_elements = photo_elements_div.find_elements(By.TAG_NAME, 'img')
                         for img in photo_elements:
                             post_data['photos'].append(img.get_attribute('src'))
                 except NoSuchElementException as click_err:
-                    print(f"Photo element not found: div.jsx-90dd3d5d3d6464a0.quadLayout")
+                    print(f"Photo element not found: quadLayout")
+            print(post_data)
 
             post_data['reactions'] = {}
-            reactions_container_element = post_element.find_element(By.CSS_SELECTOR, 'div.jsx-2490229088.countButtons')
+            print("Scraping reactions...")
+            reactions_container_element = post_element.find_element(By.CSS_SELECTOR, 'div[data-qa^="commentCountButtons"]')
             post_data['reactions'] = scrape_reactions(reactions_container_element, driver, wait)
 
             post_data['comments'] = []
             try:
+                print("In comments section...")
                 comments_container_element = post_element.find_element(By.CSS_SELECTOR, 'button[data-qa^="toggleComments-"]')
                 if comments_container_element:
                     comments_container_element.click()
                     time.sleep(2)
-
+                    
+                    # Load all comments first
+                    print("Loading all comments...")
+                    while True:
+                        try:
+                            view_more_button = post_element.find_element(By.CSS_SELECTOR, 'button[data-qa^="showMoreBtn-POST-"]')
+                            view_more_button.click()
+                            time.sleep(2)
+                        except NoSuchElementException:
+                            print("No more 'View more comments' buttons found. Loading complete.")
+                            break
+                        except TimeoutException:
+                            print("Timeout waiting for 'View more comments' button. Proceeding with loaded content.")
+                            break
+                    print("Scraping comments...")
                     comment_items_elements = post_element.find_elements(By.CSS_SELECTOR, 'div[data-qa="comment"]')
                     for comment_item_element in comment_items_elements:
                         comment_data = scrape_comment_selenium(comment_item_element, driver, wait)
@@ -151,7 +161,7 @@ def scrape_reactions(reactions_container_element, driver, wait):
                 reaction_tab_elements = driver.find_elements(By.CSS_SELECTOR, 'button[data-qa^="reactionTab-"]')
                 for reaction_tab in reaction_tab_elements:
                     reaction_tab.click()
-                    time.sleep(1)
+                    time.sleep(2)
                     popup_soup = BeautifulSoup(driver.page_source, 'html.parser')
                     modal_container = popup_soup.find('div', class_='modalContainer')
                     reactor_names_list = modal_container.find_all('span', class_='reactorName')
@@ -213,7 +223,7 @@ def scrape_comment_selenium(comment_item_element, driver, wait):
                     reply_data = scrape_comment_selenium(reply_item_element, driver, wait)
                     comment_data['replies'].append(reply_data)
             except NoSuchElementException as click_err:
-                print(f"Did not find comment reply jsx-a92a6789e88cdd98.thread")
+                print(f"Did not find comment reply div[data-qa=\"reply\"]")
     except NoSuchElementException as click_err:
         print(f"Did not find comment reply thread jsx-a92a6789e88cdd98.thread")
 
