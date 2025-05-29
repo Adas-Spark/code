@@ -1,3 +1,11 @@
+# VS Code files
 *.code-workspace
-# Ignore all files in the .vscode directory
 .vscode/*
+
+# Python files
+**pycache**/
+.ipynb_checkpoints/
+
+# Environment and data files
+.env
+*.db
