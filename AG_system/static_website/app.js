@@ -1,10 +1,10 @@
 // ===== CONFIGURATION =====
 const API_CONFIG = {
-	baseUrl: '/api',  // This will use the same domain as your website
-	endpoints: {
+    baseUrl: 'https://adas-living-story-1s5ryuv7i-joel-swensons-projects.vercel.app/api',
+    endpoints: {
         search: '/search'
     },
-    timeout: 30000 // 30 seconds
+    timeout: 30000
 };
 
 // ===== UTILITY FUNCTIONS =====

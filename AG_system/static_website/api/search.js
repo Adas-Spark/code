@@ -1,181 +1,127 @@
 import { Pinecone } from '@pinecone-database/pinecone';
-import fetch from 'node-fetch'; // Ensure node-fetch is in your package.json
 
-// Helper function to get embeddings via DIRECT REST API CALL
 async function getEmbeddingViaRest(text, apiKey) {
-  console.log("Attempting to get embedding via REST API for text:", text ? `"${text.substring(0, 50)}..."` : "EMPTY TEXT");
+  console.log("Getting embedding for:", text.substring(0, 50) + "...");
+  
+  const fetch = (await import('node-fetch')).default;
+  
   const url = 'https://api.pinecone.io/embed';
   const headers = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     'Api-Key': apiKey,
-    'x-pinecone-api-version': '2025-04' // Compatible with SDK v6 features
+    'x-pinecone-api-version': '2025-04'
   };
   const body = JSON.stringify({
     model: 'llama-text-embed-v2',
-    inputs: [{ text: text }], // Correctly send as an object within an array
+    inputs: [{ text: text }],
     parameters: {
       input_type: 'query',
       dimension: 1024
     }
   });
 
-  console.log("Calling Pinecone REST API /embed with body:", body);
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: headers,
+    body: body
+  });
 
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: headers,
-      body: body
-    });
+  const responseData = await response.json();
 
-    // Try to parse JSON regardless of status for more detailed error logging
-    const responseData = await response.json(); 
-
-    if (!response.ok) {
-      console.error('Pinecone REST API Error - Status:', response.status);
-      console.error('Pinecone REST API Error - Response Body:', JSON.stringify(responseData, null, 2));
-      // Construct a more informative error message
-      let errorMessage = `API request failed with status ${response.status}.`;
-      if (responseData && responseData.message) {
-        errorMessage += ` Message: ${responseData.message}`;
-      } else if (responseData && responseData.error && responseData.error.message) {
-        errorMessage += ` Message: ${responseData.error.message}`;
-      } else {
-        errorMessage += ` Details: ${JSON.stringify(responseData)}`;
-      }
-      throw new Error(errorMessage);
-    }
-
-    console.log("Raw embedding response from Pinecone REST API:", JSON.stringify(responseData, null, 2));
-
-    if (responseData.data && responseData.data.length > 0 && responseData.data[0].values) {
-      console.log("Embedding successfully generated and extracted via REST API.");
-      return responseData.data[0].values;
-    } else {
-      console.error("Unexpected response structure from REST API:", responseData);
-      throw new Error('Failed to extract embedding from REST API response. Check logs.');
-    }
-  } catch (error) {
-    console.error('Error calling Pinecone REST API:', error.message);
-    if (error.stack) {
-        console.error("REST API call error stack:", error.stack);
-    }
-    // Re-throw a consolidated error message
-    throw new Error(`Embedding generation via REST API failed: ${error.message}`);
+  if (!response.ok) {
+    throw new Error(`Embedding API failed: ${response.status} - ${JSON.stringify(responseData)}`);
   }
+
+  return responseData.data[0].values;
 }
 
 export default async function handler(req, res) {
-  console.log("--- Handler Start ---");
+  console.log("--- Ada's Spark Search Handler ---");
 
-  // Standard CORS Headers
-  res.setHeader('Access-Control-Allow-Origin', '*'); // Adjust in production
+  // CORS Headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
   if (req.method !== 'POST') {
-    console.log("Method not allowed:", req.method);
     return res.status(405).json({ error: 'Method not allowed' });
   }
-
-  let queryVector; // To hold the embedding vector
 
   try {
     const { query, limit = 5 } = req.body;
 
     if (!query) {
-      console.error("Query is missing from request body.");
-      return res.status(400).json({ error: 'Query is required in the request body.' });
+      return res.status(400).json({ error: 'Query is required' });
     }
-    console.log("Received query:", query, "Limit:", limit);
 
-    if (!process.env.PINECONE_API_KEY) {
-      console.error("CRITICAL: PINECONE_API_KEY environment variable is not set.");
-      // Do not expose the exact error message about API key to the client for security
-      return res.status(500).json({ error: 'Server configuration error.' });
+    const apiKey = process.env.PINECONE_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'Server configuration error' });
     }
-    const pineconeApiKey = process.env.PINECONE_API_KEY;
+
+    console.log("Processing query:", query);
+
+    // Get embedding using REST API workaround
+    const queryVector = await getEmbeddingViaRest(query, apiKey);
+    console.log("Embedding generated, dimension:", queryVector.length);
+
+    // Query index using SDK
+    const pinecone = new Pinecone({ apiKey });
+    const index = pinecone.index('adas-memory-qa-poc');
     
-    console.log("Calling getEmbeddingViaRest function for query:", query);
-    // *** USE THE REST API EMBEDDING FUNCTION ***
-    queryVector = await getEmbeddingViaRest(query, pineconeApiKey); 
-
-    if (!queryVector || queryVector.length === 0) {
-      console.error("Error: getEmbeddingViaRest returned an empty or invalid vector.");
-      // This error is specific enough to return if it happens
-      return res.status(500).json({ error: 'Failed to generate a valid query embedding. Vector was empty or invalid.' });
-    }
-    console.log(`Embedding generated via REST. Vector dimension: ${queryVector.length}`);
-
-    // Initialize Pinecone client for querying the index
-    // This is done after successful embedding generation
-    console.log("Initializing Pinecone client for index query...");
-    const pinecone = new Pinecone({ apiKey: pineconeApiKey });
-    console.log("Pinecone client initialized for index query.");
-
-    const indexName = 'adas-memory-qa-poc';
-    console.log(`Accessing Pinecone index: "${indexName}"`);
-    const index = pinecone.index(indexName); // This does not make an API call yet
-    console.log("Index object reference obtained.");
-
-    console.log("Querying index with the generated vector...");
     const searchResponse = await index.query({
       vector: queryVector,
-      topK: parseInt(limit, 10), // Ensure limit is an integer
+      topK: parseInt(limit, 10),
       includeMetadata: true
     });
-    
-    console.log("Raw searchResponse from Pinecone index.query:", JSON.stringify(searchResponse, null, 2));
 
-    if (!searchResponse || typeof searchResponse !== 'object') {
-      console.error("Error: searchResponse is undefined or not an object from index.query.");
-      throw new Error("Invalid response structure from Pinecone query (searchResponse is falsy or not an object).");
-    }
-    
-    // It's possible to get a valid response object with no matches, or an empty matches array
-    const matches = searchResponse.matches || [];
-    
-    console.log(`Found ${matches.length} matches. Processing...`);
-    const results = matches.map(match => {
-      const metadata = match.metadata || {}; // Ensure metadata exists
+    console.log("Search completed, matches:", searchResponse.matches?.length || 0);
+
+    // Process results - FIXED: Parse answers_json
+    const results = searchResponse.matches?.map(match => {
+      const metadata = match.metadata || {};
+      
+      // Parse the answers_json string into actual objects
+      let answers = [];
+      if (metadata.answers_json) {
+        try {
+          answers = JSON.parse(metadata.answers_json);
+        } catch (error) {
+          console.error("Error parsing answers_json:", error);
+          answers = [];
+        }
+      }
+      
       return {
         question_id: metadata.question_id,
         question_text: metadata.question_text,
         category: metadata.category,
         score: match.score,
-        answers: metadata.answers // Assume answers structure is correct or handle further if needed
+        answers: answers // Now this will be an array of answer objects
       };
-    });
-   
-    const SIMILARITY_THRESHOLD = 0.6; // Define your threshold
+    }) || [];
+
+    // Check similarity threshold
+    const SIMILARITY_THRESHOLD = 0.6;
     if (results.length === 0 || (results[0] && results[0].score < SIMILARITY_THRESHOLD)) {
-      console.log("No similar questions found or score below threshold.");
       return res.status(200).json({
         results: [],
         message: "No similar questions found. Try rephrasing your question or click one of the example questions.",
         lowScore: true
       });
     }
- 
-    console.log("Successfully processed search results.");
+
     return res.status(200).json({ results });
-    
+
   } catch (error) {
-    console.error('API Error in handler:', error.message);
-    if (error.stack) {
-        console.error("API Error stack:", error.stack);
-    }
-    // Send a generic error to the client unless it's a specific, safe message
-    let clientErrorMessage = 'Internal server error.';
-    if (error.message.startsWith("Embedding generation via REST API failed") || 
-        error.message.startsWith("Failed to generate a valid query embedding")) {
-        clientErrorMessage = error.message; // These are more specific about the embedding step
-    }
-    return res.status(500).json({ error: clientErrorMessage });
+    console.error('Search error:', error);
+    return res.status(500).json({ 
+      error: 'Internal server error: ' + error.message 
+    });
   }
 }
