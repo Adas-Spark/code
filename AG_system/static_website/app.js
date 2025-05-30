@@ -1,8 +1,7 @@
 // ===== CONFIGURATION =====
 const API_CONFIG = {
-    // Replace with your actual serverless function endpoint
-    baseUrl: 'https://your-api-endpoint.vercel.app/api',
-    endpoints: {
+	baseUrl: '/api',  // This will use the same domain as your website
+	endpoints: {
         search: '/search'
     },
     timeout: 30000 // 30 seconds
@@ -30,7 +29,7 @@ const utils = {
      */
     formatDate(dateString) {
         if (!dateString) return 'Unknown date';
-        
+
         try {
             const date = new Date(dateString);
             return date.toLocaleDateString('en-US', {
@@ -87,11 +86,11 @@ const apiService = {
             return await response.json();
         } catch (error) {
             clearTimeout(timeoutId);
-            
+
             if (error.name === 'AbortError') {
                 throw new Error('Request timeout. Please try again.');
             }
-            
+
             throw error;
         }
     },
@@ -101,7 +100,7 @@ const apiService = {
      */
     async searchMemories(query, limit = 5) {
         const url = `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.search}`;
-        
+
         const requestBody = {
             query: utils.sanitizeInput(query),
             limit: Math.min(Math.max(limit, 1), 10), // Ensure limit is between 1-10
@@ -122,7 +121,7 @@ const analytics = {
      */
     trackEvent(eventName, data = {}) {
         console.log('Analytics Event:', eventName, data);
-        
+
         // Example: Send to analytics service
         // gtag('event', eventName, data);
         // or: mixpanel.track(eventName, data);
@@ -157,12 +156,12 @@ createApp({
             searchResults: [],
             selectedAnswer: null,
             selectedAnswerIndex: 0,
-            
+
             // UI state
             isLoading: false,
             showResults: false,
             error: null,
-            
+
             // Example questions from the mockup
             exampleQuestions: [
                 {
@@ -178,7 +177,7 @@ createApp({
                     text: 'What did Ada teach her parents?'
                 }
             ],
-            
+
             // Performance tracking
             searchStartTime: null
         };
@@ -207,11 +206,11 @@ createApp({
         populateQuestion(questionText) {
             this.searchQuery = questionText;
             this.clearResults();
-            
+
             analytics.trackEvent('example_question_clicked', {
                 question: questionText
             });
-            
+
             // Auto-focus search input after population
             this.$nextTick(() => {
                 const searchInput = document.querySelector('.search-input');
@@ -236,13 +235,13 @@ createApp({
 
             try {
                 // Simulate API call for development
-                const mockResponse = await this.getMockResponse(this.searchQuery);
-                
+                const response = await apiService.searchMemories(this.searchQuery);
+
                 // Uncomment the line below when your API is ready
                 // const response = await apiService.searchMemories(this.searchQuery);
-                
-                this.handleSearchSuccess(mockResponse);
-                
+
+                this.handleSearchSuccess(response);
+
             } catch (error) {
                 this.handleSearchError(error);
             } finally {
@@ -255,10 +254,17 @@ createApp({
          */
         handleSearchSuccess(response) {
             const responseTime = Date.now() - this.searchStartTime;
-            
+
+            // Check for low score message
+            if (response.lowScore && response.message) {
+                this.error = response.message;
+                this.showResults = true;
+                return;
+            }
+
             // Process the response based on expected API structure
             this.searchResults = response.results || [];
-            
+
             if (this.searchResults.length > 0) {
                 // Select the first answer of the best matching question
                 const firstResult = this.searchResults[0];
@@ -266,23 +272,23 @@ createApp({
                     this.selectAnswer(firstResult.answers[0], 0);
                 }
             }
-            
+
             this.showResults = true;
-            
+
             // Track successful search
             analytics.trackSearch(
-                this.lastSearchQuery, 
-                this.searchResults.length, 
+                this.lastSearchQuery,
+                this.searchResults.length,
                 responseTime
             );
-            
+
             // Scroll to results
             this.$nextTick(() => {
                 const resultsSection = document.querySelector('.results-section');
                 if (resultsSection) {
-                    resultsSection.scrollIntoView({ 
-                        behavior: 'smooth', 
-                        block: 'start' 
+                    resultsSection.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
                     });
                 }
             });
@@ -293,12 +299,12 @@ createApp({
          */
         handleSearchError(error) {
             console.error('Search error:', error);
-            
+
             this.error = this.getErrorMessage(error);
             this.searchResults = [];
             this.selectedAnswer = null;
             this.showResults = true;
-            
+
             analytics.trackError(error, {
                 query: this.lastSearchQuery,
                 search_context: 'primary_search'
@@ -312,15 +318,15 @@ createApp({
             if (error.message.includes('timeout')) {
                 return 'Request timed out. Please check your connection and try again.';
             }
-            
+
             if (error.message.includes('HTTP error')) {
                 return 'Service temporarily unavailable. Please try again in a moment.';
             }
-            
+
             if (error.message.includes('Failed to fetch')) {
                 return 'Unable to connect to the service. Please check your internet connection.';
             }
-            
+
             return 'Something went wrong. Please try again or contact support if the problem persists.';
         },
 
@@ -330,7 +336,7 @@ createApp({
         selectAnswer(answer, index) {
             this.selectedAnswer = answer;
             this.selectedAnswerIndex = index;
-            
+
             analytics.trackEvent('answer_selected', {
                 answer_index: index,
                 answer_id: answer.answer_id || 'unknown'
@@ -369,7 +375,7 @@ createApp({
         async getMockResponse(query) {
             // Simulate API delay
             await new Promise(resolve => setTimeout(resolve, 1500));
-            
+
             // Mock response based on query
             const mockResults = [
                 {
@@ -399,7 +405,7 @@ createApp({
                     ]
                 }
             ];
-            
+
             return { results: mockResults };
         }
     },
@@ -415,7 +421,7 @@ createApp({
                     searchInput.focus();
                 }
             }
-            
+
             // Clear search when pressing Escape
             if (event.key === 'Escape') {
                 if (this.showResults) {
@@ -432,7 +438,7 @@ createApp({
         });
 
         // Set up periodic connection check (optional)
-        this.setupConnectionMonitoring();
+        // this.setupConnectionMonitoring();
     },
 
     /**
@@ -440,7 +446,7 @@ createApp({
      */
     setupConnectionMonitoring() {
         let isOnline = navigator.onLine;
-        
+
         window.addEventListener('online', () => {
             if (!isOnline) {
                 isOnline = true;
@@ -448,12 +454,12 @@ createApp({
                 analytics.trackEvent('connection_restored');
             }
         });
-        
+
         window.addEventListener('offline', () => {
             if (isOnline) {
                 isOnline = false;
                 analytics.trackEvent('connection_lost');
-                
+
                 // Show offline message if user tries to search
                 if (this.isLoading) {
                     this.error = 'You appear to be offline. Please check your connection and try again.';
