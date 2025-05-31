@@ -1,6 +1,6 @@
 // ===== CONFIGURATION =====
 const API_CONFIG = {
-    baseUrl: 'https://adas-living-story-1s5ryuv7i-joel-swensons-projects.vercel.app/api',
+    baseUrl: 'https://adas-living-story-mf3sz08vw-joel-swensons-projects.vercel.app/api',
     endpoints: {
         search: '/search'
     },
