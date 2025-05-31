@@ -22,24 +22,13 @@ AG_system/static_website/
 ├── index.html          # Main HTML structure for the standalone search interface
 ├── styles.css          # CSS styling and responsive design
 ├── app.js             # Vue.js app and vanilla JavaScript functionality
+├── api/
+│   ├── search.js       # Main search API endpoint
+│   └── questions.js    # Dynamic example questions API endpoint
 ├── README.md          # This documentation
 ├── prompt.md          # Prompt for recreating this app (if applicable)
 └── vercel.json        # Vercel configuration for API deployment
-```
-
-## Quick Deployment Checklist
-
-### Backend API (Vercel) - Deploy First
-1. **Deploy API**: Deploy your `api/search.js` and `package.json` to Vercel
-2. **Set Environment Variables**: Add `PINECONE_API_KEY` in Vercel dashboard
-3. **Test API**: Verify your API endpoint works: `https://your-project.vercel.app/api/search`
-4. **Note URL**: Copy your Vercel deployment URL for front-end configuration
-
-### Front-End (WP Engine) - Deploy Second
-1. **Update API Config**: Set `API_CONFIG.baseUrl` in `app.js` to your Vercel URL
-2. **Upload Files**: Upload `index.html`, `styles.css`, `app.js` to WP Engine subdirectory
-3. **Test Static Site**: Verify the site loads at `https://yoursite.com/ada-search/`
-4. **Test API Integration**: Perform a search to ensure front-end → API communication works
+API Integration**: Perform a search to ensure front-end → API communication works
 
 ### WordPress Integration - Final Step
 1. **Create Page**: Add new page in WordPress admin
@@ -91,6 +80,18 @@ const API_CONFIG = {
 - Replace `your-project-name` with your actual Vercel project name
 - The full URL is required because the static front-end (WP Engine) calls the API (Vercel) - this is a cross-origin request
 - Your Vercel API must include proper CORS headers (see "CORS Configuration" section below)
+
+When you add new API endpoints (like `api/questions.js`):
+
+1. **Create the endpoint file** in your local `api/` directory
+2. **Deploy to Vercel**: `vercel --prod`
+3. **Note the new deployment URL** from Vercel output
+4. **Update `app.js`**: Change `API_CONFIG.baseUrl` to the new Vercel URL
+5. **Commit the URL update**: `git add app.js && git commit -m "Update API URL"`
+6. **Upload to WP Engine**: Only upload the updated `app.js` (NOT the API files)
+7. **Clear WP Engine cache** and test
+
+**Important**: API files (`api/*.js`) run on Vercel, not WP Engine. Only upload static files (`index.html`, `styles.css`, `app.js`) to WP Engine.
 
 ### 2. Expected API Contract
 
@@ -304,7 +305,7 @@ const searchResponse = await index.query({ vector: queryVector }); // SDK for qu
 - **API Timeouts**: Check `API_CONFIG.timeout` and Vercel function execution limits (`maxDuration: 30` in `vercel.json`)
 - **Iframe Issues**: Verify `src` attribute is correct and check browser console for iframe policy errors
 - **Mixed Content Warnings**: Ensure all resources (API, static files, CDNs, WordPress site) use HTTPS
-- **Caching**: After deploying updates, use hard refresh (Ctrl+Shift+R) to clear browser cache
+- **Caching**: After deploying updates, use hard refresh (Ctrl+Shift+R) to clear browser cache. Also clear WP Engine caches.
 
 ### Debug Mode
 Enable console logging by setting:
