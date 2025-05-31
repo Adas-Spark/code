@@ -163,20 +163,8 @@ createApp({
             error: null,
 
             // Example questions from the mockup
-            exampleQuestions: [
-                {
-                    id: 'q1',
-                    text: 'What was Ada like as a person?'
-                },
-                {
-                    id: 'q2',
-                    text: 'What was Ada\'s favorite meal?'
-                },
-                {
-                    id: 'q3',
-                    text: 'What did Ada teach her parents?'
-                }
-            ],
+            exampleQuestions: [], // Start empty
+            isLoadingQuestions: false,
 
             // Performance tracking
             searchStartTime: null
@@ -204,13 +192,13 @@ createApp({
          * Populate search input with example question
          */
         populateQuestion(questionText) {
-            this.searchQuery = questionText;
+  	    this.searchQuery = questionText;
             this.clearResults();
-
+    
             analytics.trackEvent('example_question_clicked', {
                 question: questionText
             });
-
+    
             // Auto-focus search input after population
             this.$nextTick(() => {
                 const searchInput = document.querySelector('.search-input');
@@ -218,9 +206,59 @@ createApp({
                     searchInput.focus();
                 }
             });
+    
+            // Refresh example questions after a short delay
+            setTimeout(async () => {
+                await this.loadExampleQuestions();
+            }, 2000); // 2 second delay so user sees the populated search
         },
+        
+        async loadExampleQuestions() {
+            this.isLoadingQuestions = true;
+    
+            try {
+                console.log('Loading dynamic example questions...');
+                const response = await fetch(`${API_CONFIG.baseUrl}/questions`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+        
+                if (!response.ok) {
+                    throw new Error(`Questions API failed: ${response.status}`);
+                }
+        
+                const data = await response.json();
+                this.exampleQuestions = data.questions || [];
+        
+                console.log('Loaded questions:', this.exampleQuestions.map(q => q.text));
+        
+                analytics.trackEvent('example_questions_loaded', {
+                    source: 'dynamic',
+                    count: this.exampleQuestions.length
+                });
+        
+            } catch (error) {
+                console.warn('Failed to load dynamic questions, using fallback:', error);
+        
+                // Fallback to curated static questions
+                this.exampleQuestions = [
+                    { id: 'q1', text: 'What was Ada like as a person?' },
+                    { id: 'q2', text: 'What were Ada\'s favorite activities?' },
+                    { id: 'q3', text: 'What did Ada teach her parents?' }
+                ];
+        
+                analytics.trackEvent('example_questions_loaded', {
+                    source: 'fallback',
+                    error: error.message
+                });
+            } finally {
+                this.isLoadingQuestions = false;
+            }
+         },
 
-        /**
+         /**
          * Perform search operation
          */
         async performSearch() {
@@ -411,6 +449,9 @@ createApp({
     },
 
     mounted() {
+        // Load questions first
+        await this.loadExampleQuestions();        
+
         // Set up keyboard shortcuts
         document.addEventListener('keydown', (event) => {
             // Focus search input when pressing '/' key
