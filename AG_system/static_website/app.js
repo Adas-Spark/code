@@ -448,7 +448,7 @@ createApp({
         }
     },
 
-    mounted() {
+    async mounted() {
         // Load questions first
         await this.loadExampleQuestions();        
 
