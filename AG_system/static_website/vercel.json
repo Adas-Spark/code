@@ -2,13 +2,11 @@
   "functions": {
     "api/search.js": {
       "maxDuration": 30,
-      "memory": 1024,
-      "regions": ["iad1"]
+      "memory": 1024
     },
     "api/questions.js": {
       "maxDuration": 15,
-      "memory": 512,
-      "regions": ["iad1"]
+      "memory": 512
     }
   },
   "headers": [
