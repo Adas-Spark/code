@@ -1,6 +1,19 @@
 // Create new file: api/questions.js
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // Strict CORS - only allow your domain  
+  const allowedOrigins = [
+    'https://adas-spark.org',
+    'https://www.adas-spark.org',
+    'http://localhost:8000'  // For local development
+  ];
+
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', 'https://adas-spark.org');
+  }
+  
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 

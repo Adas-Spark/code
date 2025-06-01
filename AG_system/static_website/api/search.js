@@ -40,7 +40,22 @@ export default async function handler(req, res) {
   console.log("--- Ada's Spark Search Handler ---");
 
   // CORS Headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  
+  // Strict CORS - only allow your domain  
+  const allowedOrigins = [
+    'https://adas-spark.org',
+    'https://www.adas-spark.org',
+    'http://localhost:8000'  // For local development
+  ];
+
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', 'https://adas-spark.org');
+  }
+
+
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
