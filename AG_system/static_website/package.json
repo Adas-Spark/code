@@ -1,0 +1,8 @@
+{
+  "name": "adas-living-story",
+  "version": "1.0.0",
+  "dependencies": {
+    "@pinecone-database/pinecone": "^6.0.1",
+    "node-fetch": "^3.3.2"
+  }
+}
