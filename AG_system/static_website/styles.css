@@ -144,6 +144,13 @@ body {
     font-weight: 600;
 }
 
+.disclaimer-text {
+    font-size: 0.9em;
+    color: #666;
+    font-style: italic;
+    margin-top: 1rem;
+}
+
 /* ===== SEARCH SECTION ===== */
 .search-section {
     margin-bottom: 3rem;
@@ -632,4 +639,10 @@ body {
         transition: none !important;
         animation: none !important;
     }
+}
+
+/* Hide header and footer banners when page is embedded in iframe */
+body.in-iframe .header,
+body.in-iframe .footer {
+    display: none !important;
 }
