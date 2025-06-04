@@ -21,7 +21,7 @@ Ada's Spark Memory Engine is a semantic search system that allows users to ask q
 
 ## Immediate Plan (Next 1-2 Weeks)
 1. **Add source tracking** - Create `add_source_type.py` to add `source_type: "caringbridge_post"` to existing data
-2. **Update answer generation prompt** - Modify prompt to include `source_type` and `post_title` in output JSON structure
+2. **Update answer generation prompt** - Modify prompt to include `source_type`, `post_title`, and optional `media`/`media_type` fields in output JSON structure
 3. **Generate more Q&A pairs** - Run through current pipeline with source-enhanced data to create ~300+ questions
 4. **Frontend enhancements** - Display source attribution and randomize answer order
 5. **Deploy expanded system** - Give users access to much richer question set with better UX
@@ -31,12 +31,14 @@ Ada's Spark Memory Engine is a semantic search system that allows users to ask q
 - Ada's Spark newsletters
 - Ada's Spark website content  
 - Community-submitted memories
-- Family photo captions
-- Media coverage (obituaries, magazine articles, etc.)
+- Family photo captions (with associated images)
+- Media coverage (obituaries, magazine articles, etc. with document links)
+- Official documents and records
 
 ## Frontend Enhancement Plans
-- **Source Attribution**: Display source type and post title in search results
+- **Source Attribution**: Display source type and post title in search results so users know what the answer is grounded in
 - **Answer Randomization**: Randomize order of multiple answers to avoid repetition
+- **Media Display**: Show associated images, documents, or links when available (obituary links, photos of Ada, etc.)
 - **Future Filtering**: Enable users to filter by source type or topic categories
 
 ## Long-term Automation Vision (Future Work)
@@ -65,7 +67,9 @@ Transform manual pipeline into fully automated system with:
   "category": "character",
   "question_text": "What was Ada like as a person?",
   "source_type": "caringbridge_post",  // NEW FIELD - prevents future migration pain
-  "post_title": "Ada's Amazing Day at the Hospital"  // NEW FIELD - for display attribution
+  "post_title": "Ada's Amazing Day at the Hospital",  // NEW FIELD - for display attribution
+  "media": null,                       // NEW FIELD - future-proof for images/documents
+  "media_type": null                   // NEW FIELD - "image" | "document" | "video" etc.
 }
 ```
 
