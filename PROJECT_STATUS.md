@@ -31,9 +31,21 @@ Ada's Spark Memory Engine is a semantic search system that allows users to ask q
 - Ada's Spark newsletters
 - Ada's Spark website content  
 - Community-submitted memories
-- Family photo captions (with associated images)
+- **Contextual photo integration via semantic matching with AI-generated captions**
 - Media coverage (obituaries, magazine articles, etc. with document links)
 - Official documents and records
+
+### Contextual Photo Serving (High Priority)
+- **Dynamic photo serving**: When users receive Q&A responses, system will:
+  - Embed the answer text on-the-fly using Pinecone
+  - Search against pre-generated photo captions (focusing on emotions/moments)
+  - Serve relevant photos with AI-generated descriptions alongside text answers
+- **Implementation approach**: 
+  - Use LMM (Large Multimodal Model) to process all CaringBridge photos and perhaps Google photos with her face in them (use celebration of life album?)
+  - Generate emotion-rich captions (e.g., "Ada smiling during treatment," "family moment of joy")
+  - Store caption embeddings in Pinecone with image ID/URL metadata
+  - Real-time semantic matching between answers and photo moments
+- **User experience**: Transform text-only responses into rich, multimedia memories
 
 ## Frontend Enhancement Plans
 - **Source Attribution**: Display source type and post title in search results so users know what the answer is grounded in
