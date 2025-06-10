@@ -1,6 +1,6 @@
 // ===== CONFIGURATION =====
 const API_CONFIG = {
-    baseUrl: 'https://adas-living-story-fcrkqf5gi-joel-swensons-projects.vercel.app/api',
+    baseUrl: 'https://memories.adas-spark.org/api',
     endpoints: {
         search: '/search'
     },
