@@ -114,9 +114,6 @@ def process_image_with_lineage(photo_row):
     try:
         # Step 1: Stream download from Google Photos
         # Note: You'll need to append '=w1920-h1920' to the baseUrl from Google Photos API
-        '''
-        POTENTIAL ISSUE THAT I NEED TO THINK ABOUT: The download_url is constructed as photo_row['google_photos_link'] + '=w1920-h1920'. The google_photos_link is the productUrl, which is a link to the HTML page for the photo, not the image data itself. You will want to use the baseUrl from the Google Photos API for this step (e.g., photo_row['baseUrl'] + '=w1920-h1920'). The baseUrl provides direct access to the image bytes. This is likely just a typo in the document but is critical for the script to function.
-        '''
         download_url = photo_row['base_url'] + '=w1920-h1920'
         response = requests.get(download_url)
         response.raise_for_status()
