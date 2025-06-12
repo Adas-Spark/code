@@ -1,12 +1,12 @@
-# Ada's Spark Memory Engine - Project Summary
+# Ada's Spark Memory Engine - Project Status
 
 ## Project Overview
 Ada's Spark Memory Engine is a semantic search system that allows users to ask questions about Ada Rose Swenson (who passed from leukemia at age 5) and receive answers based on her family's CaringBridge journal entries. The system uses vector embeddings to match user queries with pre-generated Q&A pairs.
 
 ## Current System State (Working End-to-End)
-✅ **Fully functional** but with limited Q&A pairs (around 5 questions)
-✅ **Frontend deployed** - Modern Vue.js interface for searching Ada's memories
-✅ **Backend working** - Pinecone vector database with semantic search
+✅ **Fully functional** but with limited Q&A pairs (around 5 questions)  
+✅ **Frontend deployed** - Modern Vue.js interface for searching Ada's memories  
+✅ **Backend working** - Pinecone vector database with semantic search  
 ✅ **Data pipeline** - Scraping → Processing → Q&A Generation → Vector Upload
 
 ## Current Data Pipeline
@@ -27,66 +27,117 @@ Ada's Spark Memory Engine is a semantic search system that allows users to ask q
 5. **Deploy expanded system** - Give users access to much richer question set with better UX
 6. **Document progress** - Create GitHub issue for source tracking implementation
 
-## Near-term Expansion Plans (Planned Future Corpuses)
-- Ada's Spark newsletters
-- Ada's Spark website content  
-- Community-submitted memories
-- **Contextual photo integration via semantic matching with AI-generated captions**
-- Media coverage (obituaries, magazine articles, etc. with document links)
-- Official documents and records
-
-### Contextual Photo Serving (High Priority)
-- **Dynamic photo serving**: When users receive Q&A responses, system will:
-  - Embed the answer text on-the-fly using Pinecone
-  - Search against pre-generated photo captions (focusing on emotions/moments)
-  - Serve relevant photos with AI-generated descriptions alongside text answers
-- **Implementation approach**: 
-  - Use LMM (Large Multimodal Model) to process all CaringBridge photos and perhaps Google photos with her face in them (use celebration of life album?)
-  - Generate emotion-rich captions (e.g., "Ada smiling during treatment," "family moment of joy")
-  - Store caption embeddings in Pinecone with image ID/URL metadata
-  - Real-time semantic matching between answers and photo moments
-- **User experience**: Transform text-only responses into rich, multimedia memories
-
-## Frontend Enhancement Plans
-- **Source Attribution**: Display source type and post title in search results so users know what the answer is grounded in
-- **Answer Randomization**: Randomize order of multiple answers to avoid repetition
-- **Media Display**: Show associated images, documents, or links when available (obituary links, photos of Ada, etc.)
-- **Future Filtering**: Enable users to filter by source type or topic categories
-
-## Long-term Automation Vision (Future Work)
-Transform manual pipeline into fully automated system with:
-- API-driven question generation
-- Question clustering and theme analysis (HDBSCAN)
-- Intelligent chunking based on themes
-- Automated answer generation via API calls
-- Smart overlap detection for new corpuses
-- Corpus-agnostic processing pipeline
-
-## Key Technical Architecture
-- **Frontend**: Vue.js 3 with modern responsive design
-- **Vector Database**: Pinecone (cloud-hosted, embeddings + metadata)
-- **Embedding Model**: Server-side via Pinecone API
-- **Data Format**: JSON throughout pipeline
-- **Deployment**: Static hosting (WP Engine planned)
-
-## Recent Architectural Decision
-**Source Tracking for Future-Proofing**: Adding `source_type` field to all data structures now to avoid expensive re-processing when adding new corpuses (newsletters, website content, etc.). This is backward-compatible and prevents technical debt while enabling source attribution in search results.
-
-**Example Enhanced Metadata**:
+### Example Enhanced Metadata Structure
 ```json
 {
   "answers_json": "[{...answers...}]",
   "category": "character",
   "question_text": "What was Ada like as a person?",
-  "source_type": "caringbridge_post",  // NEW FIELD - prevents future migration pain
-  "post_title": "Ada's Amazing Day at the Hospital",  // NEW FIELD - for display attribution
-  "media": null,                       // NEW FIELD - future-proof for images/documents
-  "media_type": null                   // NEW FIELD - "image" | "document" | "video" etc.
+  "source_type": "caringbridge_post",
+  "post_title": "Ada's Amazing Day at the Hospital",
+  "media": null,
+  "media_type": null
 }
 ```
 
-## Current Priority
-**User Value + Future-Proofing** - Get more Q&A pairs to users immediately while ensuring architectural decisions don't create technical debt. We're adding source tracking now (simple implementation) specifically to avoid expensive data migration later when adding new corpuses. The approach prioritizes: working system → forward-compatible enhancements → user value delivery.
+## Near-term Expansion Plans (Planned Future Corpuses)
+- Ada's Spark newsletters
+- Ada's Spark website content  
+- Community-submitted memories
+- Family photo captions (with associated images)
+- Media coverage (obituaries, magazine articles, etc. with document links)
+- Official documents and records
+
+### High Priority: Contextual Photo Integration
+**Dynamic photo serving system** - When users receive Q&A responses, the system will:
+- Embed the answer text on-the-fly using Pinecone
+- Search against pre-generated photo captions (focusing on emotions/moments)
+- Serve relevant photos with AI-generated descriptions alongside text answers
+
+**Implementation approach**: 
+- Use Large Multimodal Model (LMM) to process all CaringBridge photos
+- Consider Google Photos integration using celebration of life album
+- Focus on semantic matching between answers and emotional context of photos
+
+## Technical Improvements & Quality Assurance Pipeline
+
+### Data Quality & Verification (High Priority)
+- **Post-generation QA validation/Truth verification syste** - After initial Q&A generation, loop through all Q&As and send them to another LLM along with the relevant posts (cited by the answers) to improve factual accuracy and storytelling
+- **Enhanced metadata fields** - Potentially add JSON fields for:
+  - Whether questions should be used as examples
+  - Whether source posts have associated pictures
+  - Question categorization for better organization
+
+### User Experience Enhancements
+- **Query logging system** - Log all questions users ask, especially ones that don't yield matches and user-submitted questions for continuous improvement (https://gemini.google.com/share/05b343dfb528)
+- **Display improvements** - Show post titles that answers came from for better source attribution
+- **Random contextual photos** - Serve photos from CaringBridge associated with the sources that answers came from (maybe)
+- **URL optimization** - Set up adas-spark.org/memory-engine to redirect to adas-spark.org/adas-living-story (or keep memory-engine for dev)
+
+### Image Processing Pipeline
+- **Image caption generation** - Process CaringBridge and Google Photos using vision-language models (vertex with imagetext?)
+- **Proper image orientation** - Ensure images are correctly oriented before processing
+- **Optimal model configuration** - Define input prompts, model selection, context caching, structured JSON output, image resizing, and batching strategy
+- **Semantic photo serving** - When fetching answers, embed the response and search previously embedded photo captions (focusing on emotions) to serve relevant photos with captions
+
+### Specific Questions to Add to Pipeline
+- **Memorial content** - "Stories that people added in the comments when she passed away"
+- **Family context** - "Who is Oliver?" and other family member questions
+- **Final moments** - "What were Ada's last words?"
+- **Character insights** - More questions about Ada's personality, humor, and daily life
+
+### Technical Infrastructure Improvements
+- **Comprehensive logging** - Add logging to Ada's Living Story for user analytics and system monitoring
+- **Repository organization** - Update README files so they properly reference each other and ensure top-level documentation accuracy
+- **Long query optimization** - Use JavaScript or quick Pinecone API calls to make overly specific suggested questions more generic and user-friendly
+
+## Community Engagement Analysis Pipeline
+Based on research needs identified, these question areas should be prioritized for Q&A generation:
+
+### Community Connection Questions
+- How did the comments section serve as a source of community and connection?
+- What kinds of memories did people write about in the comments?
+- How did the community express support for Ada and her family?
+- What forms of support (emotional, spiritual, etc.) were most evident?
+
+### Strength and Encouragement Themes
+- Did commenters mention Ada's strength or the family's strength?
+- Were there comments offering encouragement during difficult updates?
+- Did commenters discuss shared experiences with childhood illness?
+- What connections were revealed through shared experiences?
+
+## Recent Development Updates
+
+### 5-22-2025 Meeting (Joel & Julio)
+**Key Decisions:**
+- Continue using Google Doc for project planning (skip GitHub wiki for now due to time constraints)
+- Implement PR workflow: Open PR → iterate → squash merge
+- Focus on data pipeline completion before infrastructure changes
+
+**Current Workflow Confirmed:**
+1. Scraping → Processing → Q&A Generation → QC/Merge → Vector Upload → Frontend
+2. Manual Q&A generation via Gemini app remains current approach
+3. Chunking strategy: ~50 questions per session for optimal LLM performance
+
+**Future Directions Identified:**
+- README.md improvements needed
+- Image caption extraction for corpus expansion
+- Technical blog post for website (high-level + technical sections)
+- Consider making GitHub repository public (requires PII scanning and token removal)
+- UI mockups available: [AG_system_mock_UIs](https://docs.google.com/presentation/d/1XySDoq-5Mdl8WnBfTrbOWAdv6mW0N-_fZklUtjcs8T4/edit?usp=sharing)
+
+## Current Priority ✅ MILESTONE ACHIEVED
+**300+ Questions Generated!** - Successfully expanded the Q&A database from ~5 to 300+ questions, significantly improving user experience and search coverage.
+
+**Next Phase Focus: Quality & User Experience** 
+1. **Quality assurance pipeline** - Implement post-generation validation and truth verification
+2. **Enhanced user experience** - Add query logging, source attribution display, and contextual photo serving
+3. **Technical infrastructure** - Deploy logging system and repository organization improvements
+
+**Approach Prioritization:**
+1. Working system → Forward-compatible enhancements → User value delivery
+2. Avoid technical debt through proactive metadata structure design
+3. Scale content before building automation
 
 ## Key Files & Locations
 - **Main repo**: GitHub (Adas-Spark/code)
@@ -99,10 +150,10 @@ Transform manual pipeline into fully automated system with:
 
 ## Success Metrics
 - ✅ Working end-to-end search system
-- 🎯 Expand from ~5 to ~300+ searchable questions
-- 🎯 Source attribution in search results
+- ✅ **Expanded from ~5 to 300+ searchable questions** 
+- 🎯 Source attribution in search results  
 - 🎯 Foundation for easy addition of new corpuses
 - 🔄 Future: Fully automated multi-corpus pipeline
 
-## Context for Future Conversations
+## Context for Future Development
 The system is **working and deployed** but needs more content. We're adding source tracking as **future-proofing foundation** for multi-corpus expansion, then scaling up Q&A pairs using existing pipeline before building automation. Philosophy: deliver user value while making architectural choices that won't create technical debt or require expensive refactoring later.
