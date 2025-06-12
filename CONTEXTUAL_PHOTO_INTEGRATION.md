@@ -89,8 +89,12 @@ import json
 GOOGLE_DATA_CSV = 'google_data.csv'  # From Phase 1
 LINEAGE_LOG_FILE = 'processing_lineage.json'
 MAX_DIMENSION = 1920
-WEBP_QUALITY = 85
 FILENAME_TAG = '-adasstory'
+# Adaptive quality based on source
+if source_image_size < 500000:  # Under 500KB
+    WEBP_QUALITY = 90  # Higher quality for already compressed images
+else:
+    WEBP_QUALITY = 85
 
 # --- Processing Pipeline ---
 def process_image_with_lineage(photo_row):
@@ -99,7 +103,7 @@ def process_image_with_lineage(photo_row):
     lineage_record = {
         'original_filename': photo_row['original_filename'],
         'google_photos_id': photo_row['api_id'],
-        'google_photos_link': photo_row['google_photos_link'],
+        'google_photos_link': photo_row['google_photos_link'], # Should this be 'base_url'? I don't think so but double-check
         'creation_date': photo_row['creation_date'],
         'user_caption': photo_row['user_caption'],
         'processing_timestamp': datetime.datetime.now().isoformat(),
@@ -110,7 +114,10 @@ def process_image_with_lineage(photo_row):
     try:
         # Step 1: Stream download from Google Photos
         # Note: You'll need to append '=w1920-h1920' to the baseUrl from Google Photos API
-        download_url = photo_row['google_photos_link'] + '=w1920-h1920'
+        '''
+        POTENTIAL ISSUE THAT I NEED TO THINK ABOUT: The download_url is constructed as photo_row['google_photos_link'] + '=w1920-h1920'. The google_photos_link is the productUrl, which is a link to the HTML page for the photo, not the image data itself. You will want to use the baseUrl from the Google Photos API for this step (e.g., photo_row['baseUrl'] + '=w1920-h1920'). The baseUrl provides direct access to the image bytes. This is likely just a typo in the document but is critical for the script to function.
+        '''
+        download_url = photo_row['base_url'] + '=w1920-h1920'
         response = requests.get(download_url)
         response.raise_for_status()
         lineage_record['transformations'].append({
@@ -336,6 +343,7 @@ Before running the full pipeline, conduct a comparative test of caption generati
   - Activity focus: "What is Ada doing in this image and what does it reveal about her personality..."
   - Story integration: "How does this moment fit into Ada's larger journey..." (should I provide an overview of the story for the model to have in context?)
   - Technical description: "Describe the visual elements, setting, and people in this image..."
+  - Zero Shot: "Describe this photo in detail."
 
 - Evaluate based on:
   - Emotional accuracy (captures Ada's state/context)
