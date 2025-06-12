@@ -4,7 +4,7 @@
 Ada's Spark Memory Engine is a semantic search system that allows users to ask questions about Ada Rose Swenson (who passed from leukemia at age 5) and receive answers based on her family's CaringBridge journal entries. The system uses vector embeddings to match user queries with pre-generated Q&A pairs.
 
 ## Current System State (Working End-to-End)
-✅ **Fully functional** but with limited Q&A pairs (around 5 questions)  
+✅ **Fully functional** but with >300 Q&A pairs  
 ✅ **Frontend deployed** - Modern Vue.js interface for searching Ada's memories  
 ✅ **Backend working** - Pinecone vector database with semantic search  
 ✅ **Data pipeline** - Scraping → Processing → Q&A Generation → Vector Upload
@@ -22,9 +22,8 @@ Ada's Spark Memory Engine is a semantic search system that allows users to ask q
 ## Immediate Plan (Next 1-2 Weeks)
 1. **Add source tracking** - Create `add_source_type.py` to add `source_type: "caringbridge_post"` to existing data
 2. **Update answer generation prompt** - Modify prompt to include `source_type`, `post_title`, and optional `media`/`media_type` fields in output JSON structure
-3. **Generate more Q&A pairs** - Run through current pipeline with source-enhanced data to create ~300+ questions
+3. **Re-run pipeline with updated scraping output** - Previous scraping was incomplete (missing lots of comments and some reactions)
 4. **Frontend enhancements** - Display source attribution and randomize answer order
-5. **Deploy expanded system** - Give users access to much richer question set with better UX
 6. **Document progress** - Create GitHub issue for source tracking implementation
 
 ### Example Enhanced Metadata Structure
@@ -49,15 +48,13 @@ Ada's Spark Memory Engine is a semantic search system that allows users to ask q
 - Official documents and records
 
 ### High Priority: Contextual Photo Integration
-**Dynamic photo serving system** - When users receive Q&A responses, the system will:
-- Embed the answer text on-the-fly using Pinecone
-- Search against pre-generated photo captions (focusing on emotions/moments)
+**Status**: Planning phase - detailed implementation plan in progress
+**Overview**: Dynamic photo serving system that matches user Q&A responses with relevant photos using semantic search
+- Embed the answer text (from the Q&A) on-the-fly using Pinecone
+- Search against pre-generated photo captions (focusing on emotions/moments or perhaps scene descriptions)
 - Serve relevant photos with AI-generated descriptions alongside text answers
+**Detailed Plan**: See [CONTEXTUAL_PHOTO_INTEGRATION.md](./CONTEXTUAL_PHOTO_INTEGRATION.md) for complete technical specification and implementation roadmap
 
-**Implementation approach**: 
-- Use Large Multimodal Model (LMM) to process all CaringBridge photos
-- Consider Google Photos integration using celebration of life album
-- Focus on semantic matching between answers and emotional context of photos
 
 ## Technical Improvements & Quality Assurance Pipeline
 
