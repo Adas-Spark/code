@@ -9,3 +9,12 @@
 # Environment and data files
 .env
 *.db
+
+# Contextual Photo Integration - Binary Files
+AG_system/contextual_photo_integration/original_downloads/
+AG_system/contextual_photo_integration/processed_webp/
+
+# But keep lineage and metadata
+!AG_system/contextual_photo_integration/lineage/
+!AG_system/contextual_photo_integration/*.csv
+!AG_system/contextual_photo_integration/*.json
