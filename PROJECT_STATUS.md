@@ -53,7 +53,7 @@ Ada's Spark Memory Engine is a semantic search system that allows users to ask q
 - Embed the answer text (from the Q&A) on-the-fly using Pinecone
 - Search against pre-generated photo captions (focusing on emotions/moments or perhaps scene descriptions)
 - Serve relevant photos with AI-generated descriptions alongside text answers
-**Detailed Plan**: See [README.md](/AG_system/contextual_photo_integration/README.md) for complete technical specification and implementation roadmap
+**Detailed Plan**: See [README.md](/AG_system/contextual_photo_integration/README.md) for complete technical specification and implementation roadmap. Currently being developed in contextual-photo-integration branch
 
 
 ## Technical Improvements & Quality Assurance Pipeline
