@@ -1,14 +1,15 @@
 // ===== CONFIGURATION =====
 //FOR PRODUCTION
-//const API_CONFIG = {
-//    baseUrl: 'https://memories.adas-spark.org/api',
-//    endpoints: {
-//        search: '/search'
-//    },
-//    timeout: 30000
-//};
+const API_CONFIG = {
+    baseUrl: 'https://memories.adas-spark.org/api',
+    endpoints: {
+        search: '/search'
+    },
+    timeout: 30000
+};
 
 //FOR LOCAL TESTING
+/*
 const API_CONFIG = {
     baseUrl: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? '/api'  // Use relative path for local testing
@@ -19,6 +20,7 @@ const API_CONFIG = {
     },
     timeout: 30000
 };
+*/
 
 // ===== UTILITY FUNCTIONS =====
 const utils = {
@@ -236,21 +238,23 @@ createApp({
             try {
                 console.log('Loading dynamic example questions...');
                 // For Production
-                //const response = await fetch(`${API_CONFIG.baseUrl}/questions`, {
-                //    method: 'GET',
-                //    headers: {
-                //        'Content-Type': 'application/json'
-                //    }
-                //});
+                const response = await fetch(`${API_CONFIG.baseUrl}/questions`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
 
                 // For Local Testing
+                /*
                 const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.questions || '/questions'}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json'
                     }
                 });
-        
+                */
+
                 if (!response.ok) {
                     throw new Error(`Questions API failed: ${response.status}`);
                 }
