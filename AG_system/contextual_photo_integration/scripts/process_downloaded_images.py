@@ -25,9 +25,18 @@ class ImageProcessor:
     def process_image_with_lineage(self, download_record):
         """Process a downloaded image into optimized WebP"""
         
-        if download_record['status'] != 'downloaded':
-            return download_record  # Skip failed downloads
-            
+        # Skip items that were not successfully processed in the previous step
+        if download_record.get('status') not in ['processed', 'processed_with_warnings']:
+            # If the record is from an older version of download_lineage.csv that used 'downloaded'
+            if download_record.get('status') == 'downloaded':
+                # This block can be removed once all download_lineage.csv files are updated
+                pass # Allow processing for backward compatibility
+            else:
+                # For new statuses, if not 'processed' or 'processed_with_warnings', skip
+                processing_record = download_record.copy()
+                processing_record['processing_status'] = 'skipped_due_to_download_status'
+                return processing_record
+
         processing_record = download_record.copy()
         processing_record.update({
             'processing_timestamp': datetime.datetime.now().isoformat(),
@@ -37,15 +46,29 @@ class ImageProcessor:
         
         try:
             # Load downloaded image
-            local_path = Path(download_record['local_path'])
+            local_path_str = download_record.get('local_path')
+            if not local_path_str or not Path(local_path_str).exists():
+                processing_record.update({
+                    'processing_status': 'processing_failed',
+                    'processing_error': f"Local file not found: {local_path_str}"
+                })
+                print(f"❌ Failed to process: {download_record.get('original_filename', 'Unknown file')} - File not found at {local_path_str}")
+                return processing_record
+
+            local_path = Path(local_path_str)
             img = Image.open(local_path)
             
             original_size = img.size
+            # Get file size for adaptive quality, as it's not in download_record anymore
+            file_size_bytes = local_path.stat().st_size
+            processing_record['original_file_size_bytes'] = file_size_bytes # Log the original file size
+
             processing_record['transformations'].append({
                 'step': 'loaded_from_disk',
                 'original_dimensions': f"{original_size[0]}x{original_size[1]}",
                 'original_format': img.format,
-                'original_mode': img.mode
+                'original_mode': img.mode,
+                'original_file_size_bytes': file_size_bytes
             })
             
             # Handle EXIF orientation
@@ -74,12 +97,13 @@ class ImageProcessor:
             })
             
             # Generate output filename
-            file_stem = os.path.splitext(download_record['original_filename'])[0]
+            original_filename = download_record.get('original_filename', 'unknown_original')
+            file_stem = os.path.splitext(original_filename)[0]
             new_filename = f"{file_stem}{self.FILENAME_TAG}.webp"
             output_path = self.processed_dir / new_filename
             
-            # Determine quality based on original file size
-            webp_quality = self.get_adaptive_quality(download_record['file_size_bytes'])
+            # Determine quality based on original file size (obtained above)
+            webp_quality = self.get_adaptive_quality(file_size_bytes)
             
             # Convert and save as WebP
             img.save(output_path, 'webp', quality=webp_quality)
@@ -110,8 +134,18 @@ class ImageProcessor:
         return processing_record
 
 def main():
-    # Load download lineage from Step 2.2
-    download_df = pd.read_csv('download_lineage.csv')
+    # Load download lineage
+    # Ensure the CSV path is correct, lineage_dir might be better if it was saved there.
+    # However, the previous script saved it to the root, so we load from root.
+    download_lineage_path = 'download_lineage.csv'
+    if not Path(download_lineage_path).exists():
+        # Try path inside lineage folder, if the previous script's save location is changed.
+        download_lineage_path = Path('lineage') / 'download_lineage.csv'
+        if not Path(download_lineage_path).exists():
+            print(f"Error: download_lineage.csv not found in root or lineage/ directory.")
+            return
+
+    download_df = pd.read_csv(download_lineage_path)
     
     processor = ImageProcessor()
     all_processing_records = []
