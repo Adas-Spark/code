@@ -115,7 +115,7 @@
                     </div>
                 </section>
 
-                <!-- Results Section -->
+<!-- Results Section -->
                 <section class="results-section" v-if="showResults" aria-labelledby="results-heading">
                     <h2 id="results-heading" class="sr-only">Search Results</h2>
                     
@@ -134,52 +134,153 @@
                         <p>No results found for "{{ lastSearchQuery }}". Try a different question or rephrase your search.</p>
                     </div>
 
-                    <!-- Results -->
-                    <div v-else-if="searchResults.length > 0" class="results-container">
-                        <div class="results-header">
-                            <p class="results-meta">
-                                You asked: "<span class="query-text">{{ lastSearchQuery }}</span>" 
-                                <br>The most similar question in the database was 
-                                "<span class="similar-question">{{ searchResults[0]?.question_text }}</span>"
-                            </p>
-                        </div>
-                        
-                        <div class="answer-container">
-                            <h3 class="answer-label">Answer:</h3>
-                            <div class="answer-content">
-                                <p v-if="selectedAnswer" class="answer-text">{{ selectedAnswer.answer_text }}</p>
-                                <div v-if="selectedAnswer" class="answer-meta">
-                                    <span class="source-info">
-                                        <i class="fas fa-calendar" aria-hidden="true"></i>
-                                        {{ formatDate(selectedAnswer.source_date) }}
-                                    </span>
-                                    <span class="similarity-score">
-                                        <i class="fas fa-chart-bar" aria-hidden="true"></i>
-                                        {{ Math.round(searchResults[0]?.score * 100) }}% match
-                                    </span>
+                    <!-- Results with Photo Sidebar -->
+                    <div v-else-if="searchResults.length > 0" class="results-layout">
+                        <!-- Main results column -->
+                        <div class="results-main">
+                            <div class="results-container">
+                                <div class="results-header">
+                                    <p class="results-meta">
+                                        You asked: "<span class="query-text">{{ lastSearchQuery }}</span>" 
+                                        <br>The most similar question in the database was 
+                                        "<span class="similar-question">{{ searchResults[0]?.question_text }}</span>"
+                                    </p>
+                                </div>
+                                
+                                <div class="answer-container">
+                                    <h3 class="answer-label">Answer:</h3>
+                                    <div class="answer-content">
+                                        <p v-if="selectedAnswer" class="answer-text">{{ selectedAnswer.answer_text }}</p>
+                                        <div v-if="selectedAnswer" class="answer-meta">
+                                            <span class="source-info">
+                                                <i class="fas fa-calendar" aria-hidden="true"></i>
+                                                {{ formatDate(selectedAnswer.source_date) }}
+                                            </span>
+                                            <span class="similarity-score">
+                                                <i class="fas fa-chart-bar" aria-hidden="true"></i>
+                                                {{ Math.round(searchResults[0]?.score * 100) }}% match
+                                            </span>
+                                            <span v-if="selectedAnswer.related_photos?.length" class="photo-indicator">
+                                                <i class="fas fa-camera" aria-hidden="true"></i>
+                                                {{ selectedAnswer.related_photos.length }} photos
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Multiple Answers Navigation -->
+                                <div v-if="searchResults[0]?.answers?.length > 1" class="answers-navigation">
+                                    <p class="answers-count">{{ searchResults[0].answers.length }} answers available</p>
+                                    <div class="answers-pagination">
+                                        <button 
+                                            v-for="(answer, index) in searchResults[0].answers" 
+                                            :key="answer.answer_id"
+                                            @click="selectAnswer(answer, index)"
+                                            :class="['answer-nav-btn', { 'active': selectedAnswerIndex === index }]"
+                                            :aria-label="'View answer ' + (index + 1)"
+                                        >
+                                            {{ index + 1 }}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Multiple Answers Navigation -->
-                        <div v-if="searchResults[0]?.answers?.length > 1" class="answers-navigation">
-                            <p class="answers-count">{{ searchResults[0].answers.length }} answers available</p>
-                            <div class="answers-pagination">
+                        
+                        <!-- Photo Sidebar -->
+                        <aside class="photo-sidebar" v-if="selectedAnswer?.related_photos?.length > 0" role="complementary" aria-labelledby="photos-heading">
+                            <h4 id="photos-heading" class="sidebar-title">Related Photos</h4>
+                            
+                            <div class="photo-gallery" role="list">
                                 <button 
-                                    v-for="(answer, index) in searchResults[0].answers" 
-                                    :key="answer.answer_id"
-                                    @click="selectAnswer(answer, index)"
-                                    :class="['answer-nav-btn', { 'active': selectedAnswerIndex === index }]"
-                                    :aria-label="'View answer ' + (index + 1)"
+                                    v-for="photo in selectedAnswer.related_photos" 
+                                    :key="photo.photo_id"
+                                    class="gallery-photo-item"
+                                    role="listitem"
+                                    :data-photo-id="photo.photo_id"
+                                    @click="openPhotoModal(photo)"
+                                    :aria-label="`View photo: ${photo.caption_moment || photo.caption}`"
+                                    type="button"
                                 >
-                                    {{ index + 1 }}
+                                    <div class="photo-container">
+                                        <!-- Loading state -->
+                                        <div v-if="photoLoadStates[photo.photo_id] === 'loading'" class="photo-skeleton">
+                                            <div class="skeleton-shimmer"></div>
+                                        </div>
+                                        
+                                        <!-- Error state -->
+                                        <div v-else-if="photoLoadStates[photo.photo_id] === 'error'" class="photo-error">
+                                            <i class="fas fa-image"></i>
+                                            <span>Unable to load</span>
+                                        </div>
+                                        
+                                        <!-- Photo -->
+                                        <img 
+                                            v-show="photoLoadStates[photo.photo_id] === 'loaded'"
+                                            :src="photo.thumbnail_url" 
+                                            :alt="photo.caption_moment || photo.caption"
+                                            class="gallery-thumbnail"
+                                            loading="lazy"
+                                            @load="onPhotoLoad(photo.photo_id)"
+                                            @error="onPhotoError(photo.photo_id)"
+                                        >
+                                    </div>
+                                    
+                                    <div class="photo-info">
+                                        <div class="photo-caption">{{ photo.caption_moment || photo.caption }}</div>
+                                        <div class="photo-meta">
+                                            <span class="relevance-indicator" :class="getRelevanceLabel(photo.relevance_score).toLowerCase().replace(' ', '-')">
+                                                <i class="fas fa-link"></i> {{ getRelevanceLabel(photo.relevance_score) }}
+                                            </span>
+                                        </div>
+                                    </div>
                                 </button>
                             </div>
-                        </div>
+                        </aside>
                     </div>
                 </section>
             </div>
         </main>
+
+        </main>
+        
+        <!-- Photo Modal -->
+        <div 
+            v-if="selectedPhoto" 
+            class="photo-modal" 
+            role="dialog" 
+            aria-modal="true"
+            aria-labelledby="modal-title"
+            @click="closePhotoModal"
+        >
+            <div class="modal-content" @click.stop>
+                <button 
+                    @click="closePhotoModal" 
+                    class="modal-close"
+                    aria-label="Close photo"
+                    type="button"
+                >
+                    <i class="fas fa-times"></i>
+                </button>
+                
+                <div class="modal-image-container">
+                    <img 
+                        :src="selectedPhoto.modal_url || selectedPhoto.thumbnail_url" 
+                        :alt="selectedPhoto.caption_moment || selectedPhoto.caption" 
+                        class="modal-image"
+                    >
+                </div>
+                
+                <div class="modal-info">
+                    <h3 id="modal-title" class="modal-caption">{{ selectedPhoto.caption_moment || selectedPhoto.caption }}</h3>
+                    <p v-if="selectedPhoto.caption_full" class="modal-description">{{ selectedPhoto.caption_full }}</p>
+                    <p class="modal-date">{{ formatDate(selectedPhoto.source_date) }}</p>
+                    <span class="relevance-indicator" :class="getRelevanceLabel(selectedPhoto.relevance_score).toLowerCase().replace(' ', '-')">
+                        {{ getRelevanceLabel(selectedPhoto.relevance_score) }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
 
         <!-- Footer -->
         <footer class="footer" role="contentinfo">

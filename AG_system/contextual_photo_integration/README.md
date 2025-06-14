@@ -186,6 +186,7 @@ Before running the full pipeline, conduct a comparative test of caption generati
 - Generate captions using both:
   - Vertex AI (Gemini Pro Vision) 
   - Claude-3.5-Sonnet or GPT-4V via API
+- Note that perhaps I want two captions per photo (see below)
 - Develop and test multiple prompt approaches to optimize caption quality: (Note that model won't know who is Ada in the picture if there is more than one person in the picture, I'll have to think about how to deal with that in the prompt)
   - Emotional focus: "Describe Ada's emotional state and the moment's context..."
   - Activity focus: "What is Ada doing in this image and what does it reveal about her personality..."
@@ -203,9 +204,26 @@ prompts = {
 
 # Include context on Ada's story
 context = """This image is from Ada's story - a brave 5-year-old girl 
-who fought leukemia with remarkable spirit. Some photos are from before she was diagnosed. Important dates: she was born 6-8-18, diagnosed 5-5-22, bone marrow transplant from her brother on 9-13-22, and died 7-22-23. When describing, be sensitive 
-to the medical journey while celebrating moments of joy and connection."""
+who fought leukemia with remarkable spirit. Some photos are from before she was diagnosed. Important dates: she was born 6-8-18, diagnosed 5-5-22, bone marrow transplant from her brother on 9-13-22, and died 7-22-23. When describing, be sensitive to the medical journey while celebrating moments of joy and connection."""
 ```
+
+caption_prompt = """
+Generate two captions per photo? The "Moment" one could be attached to a photo and that photo could be served somewhat randomly until I get semantic matching of photos working
+
+1. MOMENT: A brief, poetic description of the emotional moment or action (15-20 words)
+   Focus on: what's happening, the feeling, the discovery, the connection
+   Example: "The wonder of discovering a butterfly on a sunny afternoon"
+
+2. DETAILS: Specific visual and contextual information (30-40 words)
+   Include: Who's in the photo (young girl, family members), setting, activities, 
+   medical context if visible, season/time indicators
+   Example: "A young girl in a yellow dress gently observes a monarch butterfly 
+   in a hospital garden. Her careful movements show both curiosity and gentleness."
+
+Format your response as:
+MOMENT: [your moment description]
+DETAILS: [your detailed description]
+"""
 
 - Evaluate based on:
   - Emotional accuracy (captures Ada's state/context)

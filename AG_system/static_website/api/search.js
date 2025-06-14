@@ -36,6 +36,48 @@ async function getEmbeddingViaRest(text, apiKey) {
   return responseData.data[0].values;
 }
 
+async function getRelatedPhotos(answerText, answerId, apiKey, limit = 4) {
+  try {
+    // Get embedding for the answer text
+    const answerEmbedding = await getEmbeddingViaRest(answerText, apiKey);
+    
+    // Initialize Pinecone for photo index
+    const pinecone = new Pinecone({ apiKey });
+    const photoIndex = pinecone.index('adas-photos-index'); // You'll need to create this index
+    
+    // Query photo captions
+    const photoResults = await photoIndex.query({
+      vector: answerEmbedding,
+      topK: limit * 2, // Get extra for filtering
+      includeMetadata: true,
+      filter: {
+        // Add any filters you need
+      }
+    });
+    
+    // Process and filter results
+    const photos = photoResults.matches
+      ?.filter(match => match.score > 0.55) // Relevance threshold
+      .slice(0, limit)
+      .map((match, index) => ({
+        photo_id: match.id,
+        thumbnail_url: match.metadata?.thumbnail_url,
+        modal_url: match.metadata?.modal_url || match.metadata?.thumbnail_url,
+        caption: match.metadata?.caption_moment || match.metadata?.caption,
+        caption_full: match.metadata?.caption_full,
+        relevance_score: match.score,
+        source_date: match.metadata?.creation_date,
+        position: index
+      })) || [];
+    
+    return photos;
+    
+  } catch (error) {
+    console.error('Photo matching error:', error);
+    return []; // Graceful degradation
+  }
+}
+
 export default async function handler(req, res) {
   console.log("--- Ada's Spark Search Handler ---");
 
@@ -97,29 +139,41 @@ export default async function handler(req, res) {
 
     console.log("Search completed, matches:", searchResponse.matches?.length || 0);
 
-    // Process results - FIXED: Parse answers_json
-    const results = searchResponse.matches?.map(match => {
-      const metadata = match.metadata || {};
-      
-      // Parse the answers_json string into actual objects
-      let answers = [];
-      if (metadata.answers_json) {
-        try {
-          answers = JSON.parse(metadata.answers_json);
-        } catch (error) {
-          console.error("Error parsing answers_json:", error);
-          answers = [];
+// Process results - Enhanced with photo matching
+    const results = await Promise.all(
+      searchResponse.matches?.map(async (match) => {
+        const metadata = match.metadata || {};
+        
+        // Parse the answers_json string into actual objects
+        let answers = [];
+        if (metadata.answers_json) {
+          try {
+            answers = JSON.parse(metadata.answers_json);
+            
+            // Add photos to each answer
+            for (let i = 0; i < answers.length; i++) {
+              answers[i].related_photos = await getRelatedPhotos(
+                answers[i].answer_text,
+                answers[i].answer_id,
+                apiKey,
+                4
+              );
+            }
+          } catch (error) {
+            console.error("Error parsing answers_json:", error);
+            answers = [];
+          }
         }
-      }
-      
-      return {
-        question_id: metadata.question_id,
-        question_text: metadata.question_text,
-        category: metadata.category,
-        score: match.score,
-        answers: answers // Now this will be an array of answer objects
-      };
-    }) || [];
+        
+        return {
+          question_id: metadata.question_id,
+          question_text: metadata.question_text,
+          category: metadata.category,
+          score: match.score,
+          answers: answers // Now includes related_photos for each answer
+        };
+      }) || []
+    );
 
     // Check similarity threshold
     const SIMILARITY_THRESHOLD = 0.6;
