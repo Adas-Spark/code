@@ -27,28 +27,28 @@ const mockSearchResults = {
       related_photos: [
         {
           photo_id: 'photo_001',
-          thumbnail_url: 'https://picsum.photos/250/180?random=1',
-          modal_url: 'https://picsum.photos/800/600?random=1',
-          caption_moment: 'A moment of pure joy',
-          caption_full: 'Ada laughing during a sunny afternoon at the park',
+          thumbnail_url: 'https://adas-spark.org/wp-content/uploads/2025/06/20220515_102548-grid-v2-e1749236830222.webp',
+          modal_url: 'https://adas-spark.org/wp-content/uploads/2025/06/20220515_102548-grid-v2-e1749236830222.webp',
+          caption_moment: 'Ada biking outside the hospital',
+          caption_full: 'Ada biking outside the hospital',
           relevance_score: 0.85,
           source_date: '2023-05-15',
           position: 0
         },
         {
           photo_id: 'photo_002',
-          thumbnail_url: 'https://picsum.photos/250/180?random=2',
-          modal_url: 'https://picsum.photos/800/600?random=2',
-          caption_moment: 'Discovering a butterfly',
+          thumbnail_url: 'https://adas-spark.org/wp-content/uploads/2025/06/0P5A97292-2-grid-v2.webp',
+          modal_url: 'https://adas-spark.org/wp-content/uploads/2025/06/0P5A97292-2-grid-v2.webp',
+          caption_moment: 'Fun family picture, look at those moves!',
           relevance_score: 0.72,
           source_date: '2023-05-10',
           position: 1
         },
         {
           photo_id: 'photo_003',
-          thumbnail_url: 'https://picsum.photos/250/180?random=3',
-          modal_url: 'https://picsum.photos/800/600?random=3',
-          caption_moment: 'Family cuddles on the couch',
+          thumbnail_url: 'https://adas-spark.org/wp-content/uploads/2025/06/IMG_6659-grid-v2-e1749236213867.webp',
+          modal_url: 'https://adas-spark.org/wp-content/uploads/2025/06/IMG_6659-grid-v2-e1749236213867.webp',
+          caption_moment: 'siblings!',
           relevance_score: 0.68,
           source_date: '2023-05-08',
           position: 2

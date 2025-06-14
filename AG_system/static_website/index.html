@@ -215,7 +215,7 @@
                                         
                                         <!-- Photo -->
                                         <img 
-                                            v-show="photoLoadStates[photo.photo_id] === 'loaded'"
+                                            :class="{ 'thumbnail-loaded': photoLoadStates[photo.photo_id] === 'loaded' }"
                                             :src="photo.thumbnail_url" 
                                             :alt="photo.caption_moment || photo.caption"
                                             class="gallery-thumbnail"
