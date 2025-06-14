@@ -134,17 +134,17 @@ class ImageProcessor:
         return processing_record
 
 def main():
-    # Load download lineage
-    # Ensure the CSV path is correct, lineage_dir might be better if it was saved there.
-    # However, the previous script saved it to the root, so we load from root.
-    download_lineage_path = 'download_lineage.csv'
-    if not Path(download_lineage_path).exists():
-        # Try path inside lineage folder, if the previous script's save location is changed.
-        download_lineage_path = Path('lineage') / 'download_lineage.csv'
-        if not Path(download_lineage_path).exists():
-            print(f"Error: download_lineage.csv not found in root or lineage/ directory.")
-            return
+    # Define the explicit and single source for the input file
+    lineage_dir = Path('lineage')
+    download_lineage_path = lineage_dir / 'download_lineage.csv'
+    
+    # Check if the input file exists in the expected location
+    if not download_lineage_path.exists():
+        print(f"❌ Error: Input file not found at '{download_lineage_path}'")
+        print("Please run the 'prepare_takeout_data.py' script first to generate this file.")
+        return
 
+    print(f"Loading download records from '{download_lineage_path}'...")
     download_df = pd.read_csv(download_lineage_path)
     
     processor = ImageProcessor()

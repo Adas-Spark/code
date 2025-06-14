@@ -46,6 +46,7 @@ The goal of this phase is to download all your photos and their corresponding me
     *   **File type & size:** Choose `.zip` or `.tgz`. Select a larger archive size (e.g., 50GB) if you have many photos to minimize the number of downloaded files.
 5.  Click "Create export." This process can take some time, from hours to days, depending on the size of your library. Google will email you when your export is ready.
 6.  Download the archive files and extract them to a dedicated directory on your local computer. You will find your image files (e.g., .jpg, .png, .heic) alongside JSON files that contain metadata for each image. Each image typically has its own identically named JSON file (e.g., `image_name.jpg` and `image_name.jpg.json`).
+7. Extract the zip file into a temporary takeout_extracted/ directory. For multiple albums, process one zip file at a time, clearing this directory before extracting the next.
 
 *   **Output:** A local directory containing your photo files and their associated JSON metadata files. This directory will be the starting point for the next phases. The `google_data.csv` file mentioned in previous versions of this documentation is no longer the initial input; instead, scripts will process the data directly from your Takeout export directory.
 
@@ -80,14 +81,16 @@ project_root/
 
 Since Google Takeout provides the original images directly, the primary task is to organize these files and parse the accompanying JSON metadata.
 
-A script (e.g., `prepare_takeout_data.py`) will be needed to:
+A script `prepare_takeout_data.py` will:
 1.  Read the directory of extracted Takeout files.
 2.  Identify image files and their corresponding JSON metadata files.
 3.  Parse relevant information from the JSON files (e.g., original filename, user caption (often `description` in the JSON), creation date (`photoTakenTime` -> `timestamp`), geolocation if available, etc.).
 4.  Copy or move image files to the `original_downloads/` directory, perhaps organized by date as originally planned, using the metadata from JSONs.
 5.  Store the extracted metadata in a structured way, possibly creating an initial version of the `lineage/download_lineage.json` or a new CSV file that will serve a similar purpose to the old `google_data.csv` but derived from Takeout.
 
-This script replaces the need for `download_originals.py` which previously fetched images using the API.
+Run the prepare_takeout_data.py script, pointing it to the directory of a single extracted Takeout album (e.g., takeout_extracted/Ada_headshot_ish_photos).
+
+Note: Repeat this process for each album. The script will intelligently organize all photos chronologically into the same original_downloads/ directory.
 
 #### **Step 2.3: Process Downloaded Images**
 
