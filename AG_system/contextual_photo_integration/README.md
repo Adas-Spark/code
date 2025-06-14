@@ -20,7 +20,7 @@ Before you begin, make sure you have the following:
 * **Accounts:**  
   * A Google Cloud account with a project created.  
   * Billing enabled for the project (required for API usage, though you will likely stay within free tiers).  
-  * APIs Enabled: **Vertex AI API**. (Google Photos Library API is no longer required for data extraction).
+  * APIs Enabled: **Vertex AI API**.
   * A WordPress administrator account on your WP Engine site.  
 * **Software:**  
   * Python 3 installed on your local computer.  
