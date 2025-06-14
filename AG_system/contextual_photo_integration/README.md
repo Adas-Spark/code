@@ -80,6 +80,12 @@ This section provides a concise summary of the commands needed to run the entire
     python scripts/process_downloaded_images.py
     ```
 
+2.5.  **(Optional) Verify Processing:** Run the verification script to confirm all images were processed successfully.
+
+    ```bash
+    python scripts/verify_processing.py
+    ```
+
 3.  **Upload & Export from WordPress:** Manually upload the contents of the `processed_webp/` folder to your WordPress media library. Then, export the URLs of the uploaded files into a file named `wordpress_urls.csv` in the project root.
 
 4.  **Merge WordPress URLs:** Run the merge script to combine the processing lineage with your new WordPress URLs.
@@ -127,19 +133,7 @@ Install the required libraries:
 pip install Pillow requests pandas
 ```
 
-Create your directory structure:
-```
-project_root/
-├── original_downloads/        # Original files (can delete after project)
-│   ├── 2019-03-15/           # Organized by date
-│   └── 2022-05-05/
-├── processed_webp/           # Your WebP files
-├── lineage/                  # Complete tracking
-│   ├── download_lineage.json
-│   ├── processing_lineage.json
-│   └── master_lineage.json
-└── scripts/                  # Your processing scripts
-```
+Create your directory structure as illustrated in the "Project Directory Structure" section.
 
 #### **Step 2.2: Organize Takeout Files and Extract Metadata**
 
@@ -169,6 +163,9 @@ Create the processing script that transforms images from `original_downloads/` i
 - `lineage/takeout_metadata_log.json` (or similar) - Log of metadata extracted from Takeout JSONs.
 - `lineage/processing_lineage.json` - Complete transformation history for each image.
 - `processing_lineage.csv` - Tabular format for Phase 3 integration, now based on Takeout data.
+
+After running the main processing script, you can use the optional `scripts/verify_processing.py` script to programmatically confirm that all expected files were processed successfully.
+
 
 #### **Step 2.4: Lineage Benefits**
 
