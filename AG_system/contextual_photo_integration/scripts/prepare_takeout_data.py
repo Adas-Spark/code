@@ -51,18 +51,15 @@ class TakeoutProcessor:
 
     def find_json_metadata_file(self, media_file_path):
         """Finds the corresponding JSON metadata file using a flexible matching strategy."""
-        # Strategy 1: Direct match
         direct_match_path = media_file_path.with_suffix(media_file_path.suffix + '.supplemental-metadata.json')
         if direct_match_path.exists():
             return direct_match_path
 
-        # Strategy 2: Flexible Prefix Match (handles typos)
         media_filename_prefix = media_file_path.name + '.'
         for potential_json_path in media_file_path.parent.glob('*.json'):
             if potential_json_path.name.startswith(media_filename_prefix):
                 return potential_json_path
         
-        # Strategy 3: Handle edited filenames with numbers, like 'image(1).jpg'
         media_stem = media_file_path.stem
         match = re.match(r'(.+?)\((\d+)\)$', media_stem)
         if match:
@@ -72,8 +69,10 @@ class TakeoutProcessor:
                     return potential_json_path
         return None
 
-    def process_takeout_item(self, media_file_path, json_file_path, file_hash):
+    # NEW: Added 'current_num' and 'total_files' parameters for progress printing
+    def process_takeout_item(self, media_file_path, json_file_path, file_hash, current_num, total_files):
         """Processes a single media file and its JSON metadata."""
+        progress_prefix = f"[{current_num}/{total_files}]"
         lineage_record = {
             'md5_hash': file_hash,
             'original_takeout_path': str(media_file_path),
@@ -126,15 +125,18 @@ class TakeoutProcessor:
 
             if not lineage_record['error_message']:
                 lineage_record['status'] = 'processed'
-                print(f"✅ Processed new file: {lineage_record['original_filename']}")
+                # UPDATED PRINT STATEMENT
+                print(f"{progress_prefix} ✅ Processed new file: {lineage_record['original_filename']}")
             else:
                 lineage_record['status'] = 'processed_with_warnings'
-                print(f"⚠️ Processed with warnings: {lineage_record['original_filename']} - {lineage_record['error_message']}")
+                # UPDATED PRINT STATEMENT
+                print(f"{progress_prefix} ⚠️ Processed with warnings: {lineage_record['original_filename']} - {lineage_record['error_message']}")
 
         except Exception as e:
             lineage_record['status'] = 'error_processing_json'
             lineage_record['error_message'] += f"Error: {e}. "
-            print(f"❌ Error processing JSON for {media_file_path.name}: {e}")
+            # UPDATED PRINT STATEMENT
+            print(f"{progress_prefix} ❌ Error processing JSON for {media_file_path.name}: {e}")
         
         self.all_lineage_records.append(lineage_record)
 
@@ -142,43 +144,65 @@ class TakeoutProcessor:
         """Scans the Takeout directory, skipping already processed files based on MD5 hash."""
         print(f"Scanning Takeout directory: {self.takeout_dir}...")
         
+        # NEW: First, build a list of all files to process to get a total count.
+        media_files_to_process = []
         for root, _, files in os.walk(self.takeout_dir):
             for filename in files:
-                media_file_path = Path(root) / filename
-                if media_file_path.suffix.lower() not in SUPPORTED_EXTENSIONS:
-                    continue
+                if Path(filename).suffix.lower() in SUPPORTED_EXTENSIONS:
+                    media_files_to_process.append(Path(root) / filename)
+        
+        total_files = len(media_files_to_process)
+        if total_files == 0:
+            print("No media files found in the specified directory.")
+            return
 
-                # --- HASH CHECK ---
-                file_hash = self.calculate_hash(media_file_path)
-                if file_hash in self.processed_hashes:
-                    print(f"⏭️ Skipping duplicate content: {filename}")
-                    continue
-                
-                json_file_path = self.find_json_metadata_file(media_file_path)
-                if json_file_path:
-                    self.process_takeout_item(media_file_path, json_file_path, file_hash)
-                    self.processed_hashes.add(file_hash) # Add new hash to set
-                else:
-                    print(f"⚠️ Warning: Missing JSON for media file: {media_file_path}")
-                    lineage_record = {
-                        'md5_hash': file_hash,
-                        'original_takeout_path': str(media_file_path),
-                        'original_filename': media_file_path.name,
-                        'status': 'error_missing_json',
-                        'error_message': 'JSON metadata file not found.'
-                    }
-                    self.all_lineage_records.append(lineage_record)
+        print(f"Found {total_files} potential media files. Starting processing...")
+
+        # NEW: Loop through the pre-scanned list with an index for the counter.
+        for i, media_file_path in enumerate(media_files_to_process):
+            current_num = i + 1
+            progress_prefix = f"[{current_num}/{total_files}]"
+
+            file_hash = self.calculate_hash(media_file_path)
+            if file_hash in self.processed_hashes:
+                # UPDATED PRINT STATEMENT
+                print(f"{progress_prefix} ⏭️  Skipping duplicate content: {media_file_path.name}")
+                continue
+            
+            json_file_path = self.find_json_metadata_file(media_file_path)
+            if json_file_path:
+                # NEW: Pass counter info to the processing function.
+                self.process_takeout_item(media_file_path, json_file_path, file_hash, current_num, total_files)
+                self.processed_hashes.add(file_hash)
+            else:
+                # UPDATED PRINT STATEMENT
+                print(f"{progress_prefix} ⚠️ Warning: Missing JSON for media file: {media_file_path}")
+                lineage_record = {
+                    'md5_hash': file_hash,
+                    'original_takeout_path': str(media_file_path),
+                    'original_filename': media_file_path.name,
+                    'status': 'error_missing_json',
+                    'error_message': 'JSON metadata file not found.'
+                }
+                self.all_lineage_records.append(lineage_record)
 
     def save_lineage(self):
         """Saves the final, combined lineage records to JSON and CSV, overwriting the old files."""
         json_path = self.lineage_dir / 'download_lineage.json'
         csv_path = self.lineage_dir / 'download_lineage.csv'
 
-        with open(json_path, 'w', encoding='utf-8') as f:
-            json.dump(self.all_lineage_records, f, indent=4)
-
+        # Remove existing records that might have been loaded to prevent duplication
+        # This creates a DataFrame from the unique set of records managed in memory.
         if self.all_lineage_records:
-            df = pd.DataFrame(self.all_lineage_records)
+            # A more robust way to handle records is to build a dict keyed by hash
+            # to ensure absolute uniqueness before saving.
+            final_records_by_hash = {record['md5_hash']: record for record in self.all_lineage_records}
+            final_records = list(final_records_by_hash.values())
+            
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(final_records, f, indent=4)
+
+            df = pd.DataFrame(final_records)
             columns = [
                 'md5_hash', 'original_takeout_path', 'original_filename', 'creation_date',
                 'user_caption', 'local_path', 'status', 'error_message',
