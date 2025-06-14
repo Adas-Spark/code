@@ -7,7 +7,7 @@ This process involves four main phases:
 1. **Data Extraction:** Downloading your photos and their metadata using Google Takeout. Google Takeout allows you to export your Google Photos library, including original image files and accompanying JSON metadata files for each image.
 2. **Download & Processing:** Processing the downloaded original images from Google Takeout into optimized WebP files with complete lineage tracking throughout the transformation pipeline.
 3. **Hosting & URL Generation:** Uploading the processed WebP files to your WP Engine WordPress site to get a permanent, high-performance hosting URL for each image.  
-4. **Enrichment & Consolidation:** Merging all the data (extracted from Takeout JSONs and WordPress URLs) and then using Google's Vertex AI (Gemini) to generate a high-quality, descriptive caption for each image.
+4. **Enrichment & Consolidation:** Merging all the data (extracted from Takeout JSONs and WordPress URLs) and then using Google's Vertex AI (Gemini) or another model (TBD) to generate a high-quality, descriptive caption for each image.
 5. **Vector Database Integration Strategy:** The generated captions will be embedded and stored in Pinecone alongside your existing Q&A pairs
 6. **Q&A integration experimentation:** Multiple approaches need testing to determine optimal photo-to-answer matching
 
