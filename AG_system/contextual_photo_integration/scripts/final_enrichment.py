@@ -42,7 +42,8 @@ master_df['ai_description'] = ai_descriptions
 master_df.drop(columns=['file_stem_x', 'file_stem_y', 'filename'], inplace=True, errors='ignore')  
 master_df.to_csv('FINAL_MASTER_DATA.csv', index=False)  
   
-print("nn--- Process Complete ---")  
+print("\n\n--- Process Complete ---")
 print("Final, unified dataset saved to 'FINAL_MASTER_DATA.csv'")
-if name == 'main':
-final_enrich_data()
+
+if __name__ == '__main__':
+    final_enrich_data()
