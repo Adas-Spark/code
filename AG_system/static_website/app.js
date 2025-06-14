@@ -10,11 +10,12 @@
 
 //FOR LOCAL TESTING
 const API_CONFIG = {
-    baseUrl: window.location.hostname === 'localhost' 
-        ? '' // Use relative URLs for local testing
+    baseUrl: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? '/api'  // Use relative path for local testing
         : 'https://memories.adas-spark.org/api',
     endpoints: {
-        search: '/search'
+        search: '/search',
+        questions: '/questions'  // Add this
     },
     timeout: 30000
 };
@@ -234,7 +235,16 @@ createApp({
     
             try {
                 console.log('Loading dynamic example questions...');
-                const response = await fetch(`${API_CONFIG.baseUrl}/questions`, {
+                // For Production
+                //const response = await fetch(`${API_CONFIG.baseUrl}/questions`, {
+                //    method: 'GET',
+                //    headers: {
+                //        'Content-Type': 'application/json'
+                //    }
+                //});
+
+                // For Local Testing
+                const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.questions || '/questions'}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json'
@@ -394,7 +404,7 @@ createApp({
             // Initialize photo load states
             if (answer.related_photos) {
                 answer.related_photos.forEach(photo => {
-                    this.$set(this.photoLoadStates, photo.photo_id, 'loading');
+                    this.photoLoadStates[photo.photo_id] = 'loading';
                 });
             }
 
@@ -403,8 +413,7 @@ createApp({
                 answer_id: answer.answer_id || 'unknown',
                 has_photos: answer.related_photos?.length > 0
             });
-        },
-        
+        },        
         /**
          * Clear search results and UI state
          */
@@ -437,14 +446,13 @@ createApp({
          * Handle photo load success
          */
         onPhotoLoad(photoId) {
-            this.$set(this.photoLoadStates, photoId, 'loaded');
-        },
-        
+            this.photoLoadStates[photoId] = 'loaded';
+        },        
         /**
          * Handle photo load error
          */
         onPhotoError(photoId) {
-            this.$set(this.photoLoadStates, photoId, 'error');
+            this.photoLoadStates[photoId] = 'error';
             
             analytics.trackEvent('photo_load_error', {
                 photo_id: photoId,
