@@ -13,6 +13,39 @@ This process involves four main phases:
 
 The final deliverable will be a single master CSV file containing all this information, ready to be used to populate your Pinecone vector database. This CSV will be built from the information extracted from the Google Takeout JSON files and subsequent processing steps.
 
+### Project Directory Structure
+
+This diagram outlines the complete folder and file structure of the project. Comments denote which items are created manually by the user versus those that are generated automatically by the processing scripts.
+
+project_root/
+├── takeout_extracted/         # USER-MANAGED: Temporary staging area for unzipping one Takeout album at a time.
+│
+├── original_downloads/        # AUTO-GENERATED: Original photos, organized by date by prepare_takeout_data.py.
+│   ├── 2022-05-05/
+│   └── ...
+│
+├── processed_webp/            # AUTO-GENERATED: Optimized .webp images ready for upload to WordPress.
+│   └── some-image-adasstory.webp
+│
+├── lineage/                   # AUTO-GENERATED: Contains all tracking and metadata files from the pipeline.
+│   ├── download_lineage.csv
+│   ├── download_lineage.json
+│   ├── processing_lineage.csv
+│   ├── processing_lineage.json
+│   └── complete_image_lineage.csv
+│
+├── scripts/                   # USER-CREATED: All the Python scripts for the project.
+│   ├── prepare_takeout_data.py
+│   ├── process_downloaded_images.py
+│   ├── merge_wordpress_data.py
+│   └── final_enrichment.py
+│
+├── .gitignore                 # USER-CREATED: Tells Git which files and folders to ignore.
+├── credentials.json           # USER-CREATED: Your secret credentials from Google Cloud. (Ignored by Git).
+├── README.md                  # USER-CREATED: This project documentation file.
+├── wordpress_urls.csv         # USER-CREATED: Manually exported from WordPress after uploading WebP files.
+└── FINAL_MASTER_DATA.csv      # AUTO-GENERATED: The final, enriched output of the entire pipeline.
+
 ### **Prerequisites**
 
 Before you begin, make sure you have the following:
@@ -31,6 +64,36 @@ Before you begin, make sure you have the following:
 
 ### ---
 
+### **Execution Workflow (Quick Start Guide)**
+
+This section provides a concise summary of the commands needed to run the entire data processing pipeline.
+
+1.  **Prepare a Takeout Album:** Unzip a single Google Takeout album into a temporary staging folder (e.g., `takeout_extracted/`). Then run the preparation script, pointing it to the album's sub-folder. Repeat this step for each album.
+
+    ```bash
+    python scripts/prepare_takeout_data.py takeout_extracted/Name-Of-Album-Folder/
+    ```
+
+2.  **Process Images to WebP:** Run the processing script. It automatically finds all new images from the previous step and converts them to WebP.
+
+    ```bash
+    python scripts/process_downloaded_images.py
+    ```
+
+3.  **Upload & Export from WordPress:** Manually upload the contents of the `processed_webp/` folder to your WordPress media library. Then, export the URLs of the uploaded files into a file named `wordpress_urls.csv` in the project root.
+
+4.  **Merge WordPress URLs:** Run the merge script to combine the processing lineage with your new WordPress URLs.
+
+    ```bash
+    python scripts/merge_wordpress_data.py
+    ```
+
+5.  **Enrich with AI Captions:** Run the final script to generate AI captions. *(Note: You must first edit the script to set your GCP Project ID and a specific AI prompt).*
+
+    ```bash
+    python scripts/final_enrichment.py
+    ```
+
 **Phase 1: Data Extraction with Google Takeout**
 
 The goal of this phase is to download all your photos and their corresponding metadata from Google Photos using Google Takeout.
@@ -45,10 +108,11 @@ The goal of this phase is to download all your photos and their corresponding me
     *   **Frequency:** "Export once."
     *   **File type & size:** Choose `.zip` or `.tgz`. Select a larger archive size (e.g., 50GB) if you have many photos to minimize the number of downloaded files.
 5.  Click "Create export." This process can take some time, from hours to days, depending on the size of your library. Google will email you when your export is ready.
-6.  Download the archive files and extract them to a dedicated directory on your local computer. You will find your image files (e.g., .jpg, .png, .heic) alongside JSON files that contain metadata for each image. Each image typically has its own identically named JSON file (e.g., `image_name.jpg` and `image_name.jpg.json`).
-7. Extract the zip file into a temporary takeout_extracted/ directory. For multiple albums, process one zip file at a time, clearing this directory before extracting the next.
+6.  Download the archive files. Create a dedicated staging directory on your local computer (e.g., `takeout_extracted/`) and extract the contents of a single album's `.zip` file into it.
+7.  Inside the extracted album folder, you will find your image files (e.g., `.jpg`, `.png`, `.heic`) alongside JSON files that contain the metadata. Each image typically has its own supplemental JSON file (e.g., `image_name.JPG` and `image_name.JPG.supplemental-metadata.json`).
+8.  **For a multi-album workflow:** After processing the first album, clear the staging directory and repeat step 6 for the next album's `.zip` file. The scripts are designed to add new photos without creating duplicates.
 
-*   **Output:** A local directory containing your photo files and their associated JSON metadata files. This directory will be the starting point for the next phases. The `google_data.csv` file mentioned in previous versions of this documentation is no longer the initial input; instead, scripts will process the data directly from your Takeout export directory.
+* **Output:** A local directory containing the photo files and their associated JSON metadata files from a single Takeout album, ready for processing. The `prepare_takeout_data.py` script will be run on this directory. The `google_data.csv` file mentioned in previous versions of this documentation is no longer used; instead, scripts process the data directly from your Takeout export.
 
 ### ---
 
@@ -83,7 +147,7 @@ Since Google Takeout provides the original images directly, the primary task is 
 
 A script `prepare_takeout_data.py` will:
 1.  Read the directory of extracted Takeout files.
-2.  Identify image files and their corresponding JSON metadata files.
+2.  This script is state-aware. It loads the existing lineage/download_lineage.csv file at startup and uses MD5 hashes to automatically skip any images (by content) that have already been processed in previous runs.
 3.  Parse relevant information from the JSON files (e.g., original filename, user caption (often `description` in the JSON), creation date (`photoTakenTime` -> `timestamp`), geolocation if available, etc.).
 4.  Copy or move image files to the `original_downloads/` directory, perhaps organized by date as originally planned, using the metadata from JSONs.
 5.  Store the extracted metadata in a structured way, possibly creating an initial version of the `lineage/download_lineage.json` or a new CSV file that will serve a similar purpose to the old `google_data.csv` but derived from Takeout.
