@@ -88,9 +88,19 @@ This section provides a concise summary of the commands needed to run the entire
     python scripts/verify_processing.py
     ```
 
-3.  **Upload & Export from WordPress:** Manually upload the contents of the `processed_webp/` folder to your WordPress media library. Then, export the URLs of the uploaded files into a file named `wordpress_urls.csv` in the project root.
+3.  **Upload to WordPress, Export URLs with WP-CLI, and Download/Append:**
+    *   Manually upload the contents of the `processed_webp/` folder to your WordPress media library (as described in Phase 3, Step 3.2). Note: Only upload new files. This is a brittle part of the pipeline and should be automated.
+    *   On your WP Engine server, find the wordpress filenames and URLs using the WP-CLI command and create a remote file with this info (Phase 3, Step 3.3):
+        ```bash
+        # Example: ssh your_env@your_env.ssh.wpengine.net "cd sites/your_env && wp post list --post_type=attachment --fields=post_name,guid --format=csv | grep -- '-adasstory' > wordpress_urls.csv"
+        ```
+    *   Then, run the local script to download and append these URLs:
+        ```bash
+        chmod +x scripts/download_and_append_urls.sh && ./scripts/download_and_append_urls.sh
+        ```
+        Ensure your `.env` file is correctly configured at `AG_system/contextual_photo_integration/.env` before running this.
 
-4.  **Merge WordPress URLs:** Run the merge script to combine the processing lineage with your new WordPress URLs.
+4.  **Merge WordPress URLs:** Run the merge script to combine the processing lineage with your (now locally updated) WordPress URLs.
 
     ```bash
     python scripts/merge_wordpress_data.py
@@ -200,21 +210,62 @@ Navigate to your WordPress Media Library folder and bulk upload all `.webp` file
 - Better error handling and progress visibility
 - Native WordPress optimization and organization
 
-#### **Step 3.3: Export WordPress URLs**
+#### **Step 3.3: Export WordPress URLs using WP-CLI**
 
-Use an "Export Media Library" plugin to export metadata for your uploads. Filter the export to show only images uploaded today to isolate your new files.
+This step involves using WP-CLI directly on your WP Engine server to export the necessary image URLs.
 
-#### **Step 3.4: Merge with Processing Lineage**
+1.  **SSH into WP Engine:**
+    ```bash
+    ssh environmentname@environmentname.ssh.wpengine.net
+    ```
+    Replace `environmentname` with your specific WP Engine environment name.
 
-Create a simple script to merge WordPress URLs with your Phase 2 lineage data:
+2.  **Navigate to your site's root directory:**
+    ```bash
+    cd sites/environmentname
+    ```
+    Again, replace `environmentname` with your site's name.
 
-**merge_wordpress_data.py**
+3.  **Run the WP-CLI command:**
+    ```bash
+    wp post list --post_type=attachment --fields=post_name,guid --format=csv | grep -- '-adasstory' > wordpress_urls.csv
+    ```
+    This command lists all attachments, extracts their post name (slug) and GUID (URL), formats the output as CSV, and then filters for filenames containing `'-adasstory'` (or your chosen suffix) to capture only the relevant processed images. The output is saved to `wordpress_urls.csv` in your site's root directory on the server. **Note:** The `grep` suffix (`'-adasstory'`) might need to be adjusted based on the filename convention established in `process_downloaded_images.py`.
+
+#### **Step 3.4: Download and Append URLs**
+
+This step uses the `scripts/download_and_append_urls.sh` script to securely download the `wordpress_urls.csv` file from your server and append its contents to a local version.
+
+1.  **Configure Environment Variables:**
+    The script requires a `.env` file located at `AG_system/contextual_photo_integration/.env`. This file must contain the following variables for `scp` to connect to your server:
+    ```
+    REMOTE_USER="your_ssh_username"
+    REMOTE_HOST="your_wpengine_ssh_host"
+    # (e.g., environmentname.ssh.wpengine.net)
+    REMOTE_PATH="/sites/environmentname/wordpress_urls.csv"
+    # (full path to the csv on the server)
+    ```
+    Replace the placeholder values with your actual credentials and paths. For example:
+    ```
+    REMOTE_USER="mywpuser"
+    REMOTE_HOST="mysite.ssh.wpengine.net"
+    REMOTE_PATH="/sites/mysite/wordpress_urls.csv"
+    ```
+
+2.  **Run the script:**
+    The script will:
+    *   Use `scp` to download `wordpress_urls.csv` from the `REMOTE_PATH` on your `REMOTE_HOST` using `REMOTE_USER`.
+    *   Create `lineage/wordpress_urls.csv` locally if it doesn't exist, adding the headers `filename,url`.
+    *   Append the newly downloaded URLs to this local file, skipping the header row from the downloaded file to avoid duplication.
+
+    This ensures that subsequent runs of `merge_wordpress_data.py` (Step 4 in the Quick Start Guide) will use the most up-to-date list of WordPress URLs.
 
 Output:
 
-- All images hosted on WordPress with permanent URLs
-- complete_image_lineage.csv - Full lineage from Google Takeout data, through local processing, to WordPress hosting.
-- Organized WordPress Media Library for easy management
+- All images hosted on WordPress with permanent URLs accessible via the server-generated `wordpress_urls.csv`.
+- `lineage/wordpress_urls.csv` file locally, containing an aggregated list of filenames and their corresponding WordPress URLs, ready for merging by `merge_wordpress_data.py`.
+- `complete_image_lineage.csv` (generated by `merge_wordpress_data.py` in a later step) - Full lineage from Google Takeout data, through local processing, to WordPress hosting.
+- Organized WordPress Media Library for easy management.
 
 ### ---
 
@@ -306,6 +357,27 @@ The generated captions will be embedded and stored in Pinecone alongside your ex
 - When users receive Q&A responses, system searches photo captions for semantic similarity
 - Serves contextually relevant images alongside text answers
 - Maintains separate caption and Q&A vector spaces for targeted retrieval 
+
+### ---
+
+### **Troubleshooting and Utility Scripts**
+
+This section details various scripts that can help diagnose issues or perform specific utility functions within the project.
+
+#### **`targeted_check.sh` - Diagnosing Filename Discrepancies**
+
+*   **Purpose:** This script is designed to help debug issues where specific files are not merging correctly between `lineage/processing_lineage.csv` and `lineage/wordpress_urls.csv`. This often occurs due to subtle filename mismatches (e.g., case differences, spaces vs. hyphens, presence/absence of special characters).
+*   **How it Works:**
+    *   The script contains a hard-coded array of problematic filename *stems* (the part of the filename before the extension).
+    *   It iterates through this list. For each filename stem, it uses `grep` to search for matching lines in both `lineage/processing_lineage.csv` and `lineage/wordpress_urls.csv`.
+    *   It then displays any matching lines found in both files, allowing for a direct visual comparison of how the filename appears in each CSV.
+*   **Utility:** This script is particularly useful for quickly spotting the exact nature of a filename discrepancy. It was instrumental in identifying the need for more robust filename normalization during the development of the main processing scripts.
+*   **How to Use:**
+    ```bash
+    cd AG_system/contextual_photo_integration/scripts/
+    ./targeted_check.sh
+    ```
+    (Adjust the path if you are running it from the project root, e.g., `./AG_system/contextual_photo_integration/scripts/targeted_check.sh`). You may need to `chmod +x targeted_check.sh` first.
 
 ### ---
 

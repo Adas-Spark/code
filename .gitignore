@@ -24,3 +24,4 @@ AG_system/contextual_photo_integration/processed_webp/
 !AG_system/contextual_photo_integration/lineage/
 !AG_system/contextual_photo_integration/*.csv
 !AG_system/contextual_photo_integration/*.json
+AG_system/contextual_photo_integration/.env
