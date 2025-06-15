@@ -89,8 +89,8 @@ This section provides a concise summary of the commands needed to run the entire
     ```
 
 3.  **Upload to WordPress, Export URLs with WP-CLI, and Download/Append:**
-    *   Manually upload the contents of the `processed_webp/` folder to your WordPress media library (as described in Phase 3, Step 3.2).
-    *   On your WP Engine server, export the URLs using the WP-CLI command (Phase 3, Step 3.3):
+    *   Manually upload the contents of the `processed_webp/` folder to your WordPress media library (as described in Phase 3, Step 3.2). Note: Only upload new files. This is a brittle part of the pipeline and should be automated.
+    *   On your WP Engine server, find the wordpress filenames and URLs using the WP-CLI command and create a remote file with this info (Phase 3, Step 3.3):
         ```bash
         # Example: ssh your_env@your_env.ssh.wpengine.net "cd sites/your_env && wp post list --post_type=attachment --fields=post_name,guid --format=csv | grep -- '-adasstory' > wordpress_urls.csv"
         ```
