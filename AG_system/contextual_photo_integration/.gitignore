@@ -1,6 +1,6 @@
 credentials.json
 token.json
-
+.env
 
 # --- Data and Media Directories ---
 # Ignore large directories containing raw, intermediate, and processed media.
