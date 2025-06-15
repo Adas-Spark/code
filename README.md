@@ -17,6 +17,9 @@ This project is composed of several key systems:
 * **Backend System & Data Pipeline:** Handles search queries, generates vector embeddings (currently using Pinecone's `llama-text-embed-v2` model), and queries the Pinecone vector index (`adas-memory-qa-poc`). The data pipeline involves scraping, processing, Q&A generation, quality control, and vector uploading.
     * Scraping: `AG_system/scraping/scrape.py`
     * Data Processing: `AG_system/scraping/update_authors_and_text.py`
+* **Contextual Photo Integration System:** A system to enrich Ada's Living Story by linking textual Q&A with contextually relevant images from Ada's life. This system aims to provide a richer, multimedia experience.
+    *   For detailed information on its design, workflow, and current status, please refer to the [Contextual Photo Integration README](./AG_system/contextual_photo_integration/README.md).
+    *   This component is currently under development. See [Project Status Document](./PROJECT_STATUS.md) for the latest updates.
     * Q&A Generation & Merging: Manual Q&A generation followed by `AG_system/proof_of_concepts/QC_and_merge_jsons.ipynb` for merging and JSON validation.
     * Embedding QC & Vector DB Operations (Pinecone): `AG_system/proof_of_concepts/pincecone/visualization_analysis.ipynb` for embedding quality control, and `AG_system/proof_of_concepts/pincecone/pinecone_poc.ipynb` for uploading embeddings to Pinecone.
 
@@ -40,4 +43,4 @@ This repository also contains a custom mail merge tool used for tasks such as em
 
 **Key Technologies (Ada's Living Story):**
 * **Frontend:** Vue.js 3, modern CSS.
-* **Static Site Hosting:** WP Engine (with iframe embedding). [cite: adas-spark/code/code-9b892
+* **Static Site Hosting:** WP Engine (with iframe embedding).
