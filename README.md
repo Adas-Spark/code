@@ -40,6 +40,7 @@ This repository also contains a custom mail merge tool used for tasks such as em
 5.  `AG_system/proof_of_concepts/pincecone/visualization_analysis.ipynb` → Quality control of embeddings.
 6.  `AG_system/proof_of_concepts/pincecone/pinecone_poc.ipynb` → Upload embeddings to Pinecone vector database.
 7.  `AG_system/static_website/` → Vue.js frontend (deployed to WP Engine and embedded via iframe) calls API endpoints (Node.js serverless functions deployed on Vercel) for user queries.
+8.  `AG_system/contextual_photo_integration/` scripts → Process Google Photos Takeout data, generate AI captions, and prepare `FINAL_MASTER_DATA.csv` for enriching the Pinecone vector database with image-related context.
 
 **Key Technologies (Ada's Living Story):**
 * **Frontend:** Vue.js 3, modern CSS.

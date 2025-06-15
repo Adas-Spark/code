@@ -38,7 +38,8 @@ project_root/
 │   ├── prepare_takeout_data.py
 │   ├── process_downloaded_images.py
 │   ├── merge_wordpress_data.py
-│   └── final_enrichment.py
+│   ├── final_enrichment.py
+│   └── verify_processing.py
 │
 ├── credentials.json           # USER-CREATED: Your secret credentials from Google Cloud. (Ignored by Git).
 ├── README.md                  # USER-CREATED: This project documentation file.
@@ -80,8 +81,8 @@ This section provides a concise summary of the commands needed to run the entire
     ```bash
     python scripts/process_downloaded_images.py
     ```
-    
-2.5.  **(Optional) Verify Processing:** Run the verification script to confirm all images were processed successfully.
+
+2.5.  **(Optional) Verify Processing:** Run the verification script to confirm all images were processed successfully and that lineage tracking is complete.
 
     ```bash
     python scripts/verify_processing.py
@@ -165,7 +166,7 @@ Create the processing script that transforms images from `original_downloads/` i
 - `lineage/processing_lineage.json` - Complete transformation history for each image.
 - `processing_lineage.csv` - Tabular format for Phase 3 integration, now based on Takeout data.
 
-After running the main processing script, you can use the optional `scripts/verify_processing.py` script to programmatically confirm that all expected files were processed successfully.
+After running the main processing script, you can use the optional `scripts/verify_processing.py` script to programmatically confirm that all expected files were processed successfully and that lineage tracking is complete.
 
 #### **Step 2.4: Lineage Benefits**
 
