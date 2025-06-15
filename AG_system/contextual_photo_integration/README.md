@@ -165,6 +165,7 @@ Create the processing script that transforms images from `original_downloads/` i
 - `lineage/processing_lineage.json` - Complete transformation history for each image.
 - `processing_lineage.csv` - Tabular format for Phase 3 integration, now based on Takeout data.
 
+After running the main processing script, you can use the optional `scripts/verify_processing.py` script to programmatically confirm that all expected files were processed successfully.
 
 #### **Step 2.4: Lineage Benefits**
 
