@@ -11,7 +11,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)" # Assuming scripts is under AG_system/contextual_photo_integration/scripts
 ENV_FILE="${PROJECT_ROOT}/AG_system/contextual_photo_integration/.env" # More specific path to .env
 LOCAL_IMAGE_DIR="${PROJECT_ROOT}/AG_system/contextual_photo_integration/processed_webp/"
-LINEAGE_CSV_PATH="${PROJECT_ROOT}/lineage/complete_image_lineage.csv"
+LOCAL_THUMBNAIL_DIR="${PROJECT_ROOT}/AG_system/contextual_photo_integration/processed_webp_thumbnails/"
+LINEAGE_CSV_PATH="${PROJECT_ROOT}/lineage/complete_image_lineage.csv" # Note: This might be FINAL_MASTER_DATA.csv based on previous tasks
 
 # Load configuration from .env file (primarily for WP-CLI check, which is now replaced)
 # Keep this structure if other parts of script might use .env vars in future
@@ -24,6 +25,7 @@ fi
 
 echo "Script initialized."
 echo "Local image directory: ${LOCAL_IMAGE_DIR}"
+echo "Local thumbnail directory: ${LOCAL_THUMBNAIL_DIR}"
 echo "Lineage CSV path: ${LINEAGE_CSV_PATH}"
 
 # Initialize Counters
@@ -32,6 +34,11 @@ count_local_duplicate_sets=0
 count_lineage_has_wp_url=0
 count_lineage_missing_wp_url=0
 count_not_in_lineage=0
+# Thumbnail specific counters
+count_thumbnails_found=0
+count_thumbnails_missing=0
+count_orphan_thumbnails=0
+count_total_thumbnail_files=0
 
 # Associative array to store MD5 hash as key and list of file paths as value for local files
 declare -A local_files_by_md5
@@ -204,6 +211,66 @@ fi
 echo "--- WordPress Existing Image Check (via Lineage File) Finished ---"
 echo ""
 
+# --- Thumbnail Status Checks ---
+echo "--- Starting Thumbnail Status Checks ---"
+# Ensure thumbnail directory exists
+if [ ! -d "$LOCAL_THUMBNAIL_DIR" ]; then
+  echo "Warning: Thumbnail directory ${LOCAL_THUMBNAIL_DIR} does not exist. Skipping thumbnail checks."
+else
+  # Check 1: For each full-size image, does a thumbnail exist?
+  echo "Checking for missing thumbnails..."
+  if ! ls "${LOCAL_IMAGE_DIR}"*.webp 1> /dev/null 2>&1; then
+    echo "No .webp images found in ${LOCAL_IMAGE_DIR} to check for thumbnails."
+  else
+    for img_file in "${LOCAL_IMAGE_DIR}"*.webp; do
+      base_filename=$(basename "$img_file" .webp)
+      # Updated naming convention for expected thumbnail
+      expected_thumb_filename="${base_filename}-h360-thumb.webp"
+      expected_thumb_path="${LOCAL_THUMBNAIL_DIR}${expected_thumb_filename}"
+
+      if [ -f "$expected_thumb_path" ]; then
+        ((count_thumbnails_found++))
+      else
+        echo "  - Missing thumbnail for: $img_file (expected: $expected_thumb_filename)"
+        ((count_thumbnails_missing++))
+      fi
+    done
+  fi
+
+  # Check 2: Are there any orphan thumbnails?
+  echo ""
+  echo "Checking for orphan thumbnails..."
+  # Updated pattern to find new thumbnail naming convention
+  if ! ls "${LOCAL_THUMBNAIL_DIR}"*-h360-thumb.webp 1> /dev/null 2>&1; then
+    echo "No thumbnail files matching '*-h360-thumb.webp' found in ${LOCAL_THUMBNAIL_DIR} to check for orphans."
+  else
+    # Iterate through files matching the new thumbnail naming convention
+    for thumb_file in "${LOCAL_THUMBNAIL_DIR}"*-h360-thumb.webp; do
+      ((count_total_thumbnail_files++)) # Count all actual thumbnail files matching the pattern
+      # Derive original image stem by removing the new suffix
+      thumb_basename=$(basename "$thumb_file" -h360-thumb.webp)
+      expected_img_filename="${thumb_basename}.webp"
+      expected_img_path="${LOCAL_IMAGE_DIR}${expected_img_filename}"
+
+      if [ ! -f "$expected_img_path" ]; then
+        echo "  - Orphan thumbnail found: $thumb_file (no corresponding image: $expected_img_filename)"
+        ((count_orphan_thumbnails++))
+      fi
+    done
+  fi
+  # This check might need adjustment or can be removed if only '*-h360-thumb.webp' files are considered thumbnails.
+  # It was intended to note if other .webp files exist that don't match the pattern.
+  # For now, keeping it to see if any non-h360-thumb.webp files are present.
+  general_webp_files_in_thumb_dir=$(ls "${LOCAL_THUMBNAIL_DIR}"*.webp 2>/dev/null | wc -l)
+  if [ "$count_total_thumbnail_files" -eq 0 ] && [ "$general_webp_files_in_thumb_dir" -gt 0 ]; then
+    echo "Note: .webp files are present in ${LOCAL_THUMBNAIL_DIR}, but none match the '*-h360-thumb.webp' pattern for orphan checking."
+  fi
+
+fi
+echo "--- Thumbnail Status Checks Finished ---"
+echo ""
+
+
 # --- Summary Statistics ---
 echo "--- Summary ---"
 echo "Total unique .webp files processed in ${LOCAL_IMAGE_DIR}: $count_total_unique_local_files"
@@ -211,10 +278,17 @@ echo ""
 echo "Local Duplicates:"
 echo "  - Sets of duplicate files found (by content): $count_local_duplicate_sets"
 echo ""
-echo "WordPress Status (based on lineage/complete_image_lineage.csv):"
+echo "WordPress Status (based on ${LINEAGE_CSV_PATH}):"
 echo "  - On WordPress (In Lineage & Has WP URL): $count_lineage_has_wp_url"
 echo "  - In Lineage, Awaiting WP URL: $count_lineage_missing_wp_url"
 echo "  - Not In Lineage (New/Unexpected or Lineage Outdated): $count_not_in_lineage"
+echo ""
+echo "Thumbnail Status (linking ${LOCAL_IMAGE_DIR} and ${LOCAL_THUMBNAIL_DIR}):"
+echo "  - Total full-size images checked for thumbnails: $((count_thumbnails_found + count_thumbnails_missing))"
+echo "  - Thumbnails found for full-size images (expected format 'original_stem-h360-thumb.webp'): $count_thumbnails_found"
+echo "  - Thumbnails missing for full-size images: $count_thumbnails_missing"
+echo "  - Total actual thumbnail files ('*-h360-thumb.webp') found in ${LOCAL_THUMBNAIL_DIR}: $count_total_thumbnail_files"
+echo "  - Orphan thumbnails (thumbnail exists, but full-size image is missing): $count_orphan_thumbnails"
 echo ""
 
 exit 0

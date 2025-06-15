@@ -27,6 +27,9 @@ project_root/
 ├── processed_webp/            # AUTO-GENERATED: Optimized .webp images ready for upload to WordPress.
 │   └── some-image-adasstory.webp
 │
+├── processed_webp_thumbnails/ # AUTO-GENERATED: Thumbnail versions (360px height) of processed .webp images.
+│   └── some-image-adasstory-h360-thumb.webp
+│
 ├── lineage/                   # AUTO-GENERATED: Contains all tracking and metadata files from the pipeline.
 │   ├── download_lineage.csv
 │   ├── download_lineage.json
@@ -88,14 +91,20 @@ This section provides a concise summary of the commands needed to run the entire
     python scripts/verify_processing.py
     ```
 
+2.6. **Generate Thumbnails:** Run the thumbnail generation script.
+     This script creates smaller, web-optimized thumbnails for faster loading in contexts where full-size images are not immediately needed.
+    ```bash
+    python scripts/generate_thumbnails.py
+    ```
+
 3.  **Check Image Status, Upload to WordPress, Export URLs, and Download/Append:**
-    *   Run the `check_image_status.sh` script to identify local duplicates and images already on WordPress:
+    *   Run the `check_image_status.sh` script to identify local duplicates, images already on WordPress, and the status of thumbnails:
         ```bash
         bash scripts/check_image_status.sh
         ```
-        Review the script's output, which includes detailed file lists and a final summary of statistics, to understand the status of your images. Then, manually upload only the new/unique images from `processed_webp/` to your WordPress media library (specifically to the media folder associated with this project). This step helps prevent redundant uploads.
-        Note: The script's report on which images are 'already on WordPress' is based on your `lineage/complete_image_lineage.csv` file. Ensure this file is current by running `scripts/download_and_append_urls.sh` (Step 3.4) and `scripts/merge_wordpress_data.py` (Step 4) after any manual uploads for the most accurate results from `check_image_status.sh` on subsequent runs.
-    *   On your WP Engine server, find the wordpress filenames and URLs using the WP-CLI command and create a remote file with this info (Phase 3, Step 3.3):
+        Review the script's output, which includes detailed file lists and a final summary of statistics, to understand the status of your images and thumbnails. Then, manually upload only the new/unique images from `processed_webp/` and their corresponding thumbnails from `processed_webp_thumbnails/` to your WordPress media library (specifically to the media folder associated with this project). This step helps prevent redundant uploads.
+        Note: The script's report on which images are 'already on WordPress' is based on your `FINAL_MASTER_DATA.csv` file (or `complete_image_lineage.csv` if not yet at final stage). Ensure this file is current by running the necessary merge scripts (like `scripts/merge_wordpress_data.py`) after any manual uploads for the most accurate results from `check_image_status.sh` on subsequent runs.
+    *   On your WP Engine server, find the wordpress filenames and URLs for the full-size images using the WP-CLI command and create a remote file with this info (Phase 3, Step 3.3):
         ```bash
         # Example: ssh your_env@your_env.ssh.wpengine.net "cd sites/your_env && wp post list --post_type=attachment --fields=post_name,guid --format=csv | grep -- '-adasstory' > wordpress_urls.csv"
         ```
@@ -183,6 +192,24 @@ Create the processing script that transforms images from `original_downloads/` i
 
 After running the main processing script, you can use the optional `scripts/verify_processing.py` script to programmatically confirm that all expected files were processed successfully and that lineage tracking is complete.
 
+#### **Step 2.3.5: Generate Thumbnails**
+
+After the primary image processing is complete, thumbnails are generated using the `scripts/generate_thumbnails.py` script.
+
+*   **Purpose:** This script creates lightweight, smaller versions of the processed `.webp` images. These thumbnails are intended for use in contexts where a full-resolution image is not immediately necessary, such as previews or gallery views, improving load times and user experience.
+*   **Process:**
+    1.  The script iterates through all images in the `processed_webp/` directory.
+    2.  Before generating a new thumbnail, it checks if a thumbnail matching the new naming convention (`[original_stem]-h360-thumb.webp`) already exists in the `processed_webp_thumbnails/` directory.
+    3.  If an existing thumbnail is found, the script skips the generation step for that image to save processing time. It will still attempt to gather metadata (dimensions, file size) from the existing file.
+    4.  If no existing thumbnail is found, it generates a new one with a fixed height of 360 pixels, maintaining the original aspect ratio.
+    5.  Thumbnails are saved (or confirmed to exist) in the `processed_webp_thumbnails/` directory.
+    6.  The naming convention for thumbnails is now `[original_stem]-h360-thumb.webp` (e.g., if the original is `image-adasstory.webp`, the thumbnail will be `image-adasstory-h360-thumb.webp`).
+    7.  Crucially, the script updates the `lineage/processing_lineage.json` file for each image (whether the thumbnail was newly generated or already existed), adding/updating metadata about the thumbnail. This includes its filename, path, dimensions, file size, and generation status (e.g., "success" or "success_skipped_existing").
+
+*   **Output:**
+    *   `processed_webp_thumbnails/` folder populated with thumbnail images.
+    *   Updated `lineage/processing_lineage.json` with thumbnail-specific metadata for each image entry.
+
 #### **Step 2.4: Lineage Benefits**
 
 This Takeout-first approach provides complete traceability:
@@ -195,6 +222,14 @@ This Takeout-first approach provides complete traceability:
 - **Error handling:** Failed processing tracked with reasons.
 - **Audit trail:** Complete history for compliance and debugging.
 - **Local backup:** Original Takeout files are preserved.
+- **Thumbnail Metadata:** The `processing_lineage.json` file is updated by the thumbnail generation script with the following fields for each processed image:
+    - `thumbnail_final_filename`: The filename of the generated thumbnail (e.g., `image-adasstory-h360-thumb.webp`).
+    - `thumbnail_processed_path`: The full local path to the generated thumbnail.
+    - `thumbnail_width`, `thumbnail_height`: Dimensions of the thumbnail.
+    - `thumbnail_file_size_bytes`: File size of the thumbnail.
+    - `thumbnail_generation_status`: Indicates "success" or "failure".
+    - `thumbnail_error_message`: Contains any error message if thumbnail generation failed for an image.
+  This detailed tracking extends to the `FINAL_MASTER_DATA.csv`, which will include a `wordpress_url_thumbnail` field, derived from the main image's WordPress URL, to easily access the hosted thumbnail.
 
 ### ---
 
@@ -227,9 +262,9 @@ Before uploading, it's crucial to identify which images need to be uploaded to a
     *   Identify the subset of images in `processed_webp/` that are *not* yet on WordPress and are unique. These are the files you need to upload.
 
 3.  **Manually Upload to WordPress:**
-    Navigate to your WordPress Media Library (ideally to the "Ada's Story Project" folder you created in Step 3.1) and bulk upload only the necessary `.webp` files from your local `processed_webp/` folder. Using the WordPress interface for this manual upload is generally robust.
+    Navigate to your WordPress Media Library (ideally to the "Ada's Story Project" folder you created in Step 3.1). Bulk upload the necessary `.webp` files from your local `processed_webp/` folder AND their corresponding thumbnails from the `processed_webp_thumbnails/` folder. Using the WordPress interface for this manual upload is generally robust. Ensure that both full-size images and their thumbnails are uploaded to the same WordPress media path structure if possible, so that the thumbnail URL can be reliably derived from the main image URL.
 
-This process, guided by the `check_image_status.sh` script, ensures you only upload new, unique images, preventing clutter and potential issues in your WordPress media library.
+This process, guided by the `check_image_status.sh` script, ensures you only upload new, unique images and their thumbnails, preventing clutter and potential issues in your WordPress media library.
 
 #### **Step 3.3: Export WordPress URLs using WP-CLI**
 
@@ -251,7 +286,8 @@ This step involves using WP-CLI directly on your WP Engine server to export the 
     ```bash
     wp post list --post_type=attachment --fields=post_name,guid --format=csv | grep -- '-adasstory' > wordpress_urls.csv
     ```
-    This command lists all attachments, extracts their post name (slug) and GUID (URL), formats the output as CSV, and then filters for filenames containing `'-adasstory'` (or your chosen suffix) to capture only the relevant processed images. The output is saved to `wordpress_urls.csv` in your site's root directory on the server. **Note:** The `grep` suffix (`'-adasstory'`) might need to be adjusted based on the filename convention established in `process_downloaded_images.py`.
+    This command lists all attachments, extracts their post name (slug) and GUID (URL), formats the output as CSV, and then filters for filenames containing `'-adasstory'` (or your chosen suffix) to capture only the relevant processed full-size images. The output is saved to `wordpress_urls.csv` in your site's root directory on the server. This file will primarily contain URLs for the full-size images. The `wordpress_url_thumbnail` that will eventually appear in `FINAL_MASTER_DATA.csv` is programmatically derived from these main image URLs by the `merge_wordpress_data.py` script (by inserting "-h360-thumb" into the filename component of the URL, e.g. `.../image-adasstory-h360-thumb.webp`), rather than being directly exported from WordPress.
+    **Note:** The `grep` suffix (`'-adasstory'`) might need to be adjusted based on the filename convention established in `process_downloaded_images.py`.
 
 #### **Step 3.4: Download and Append URLs**
 
@@ -361,7 +397,7 @@ This master script will take the `complete_image_lineage.csv` (which includes or
 
 **final_enrichment.py**
 
-* **Output:** A file named **FINAL_MASTER_DATA.csv**. This is your final product, a single source of truth containing every piece of information for each photo (original metadata from Takeout, processing details, WordPress URL, AI-generated captions), ready for you to use in populating your Pinecone database.
+* **Output:** A file named **FINAL_MASTER_DATA.csv**. This is your final product, a single source of truth containing every piece of information for each photo (original metadata from Takeout, processing details including thumbnail generation status, WordPress URL for the main image, the derived WordPress URL for its thumbnail (e.g., `wordpress_url_thumbnail` like `https://example.com/image-adasstory-h360-thumb.webp`), and AI-generated captions), ready for you to use in populating your Pinecone database.
 
 ### ---
 
