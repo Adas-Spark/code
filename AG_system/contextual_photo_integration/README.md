@@ -80,6 +80,12 @@ This section provides a concise summary of the commands needed to run the entire
     ```bash
     python scripts/process_downloaded_images.py
     ```
+    
+2.5.  **(Optional) Verify Processing:** Run the verification script to confirm all images were processed successfully.
+
+    ```bash
+    python scripts/verify_processing.py
+    ```
 
 3.  **Upload & Export from WordPress:** Manually upload the contents of the `processed_webp/` folder to your WordPress media library. Then, export the URLs of the uploaded files into a file named `wordpress_urls.csv` in the project root.
 
