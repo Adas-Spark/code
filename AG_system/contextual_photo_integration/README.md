@@ -93,7 +93,7 @@ This section provides a concise summary of the commands needed to run the entire
         ```bash
         bash scripts/check_image_status.sh
         ```
-        Review the script's output, which includes detailed file lists and a final summary of statistics, to understand the status of your images. Then, manually upload only the new/unique images from `processed_webp/` to your WordPress media library. This step helps prevent redundant uploads.
+        Review the script's output, which includes detailed file lists and a final summary of statistics, to understand the status of your images. Then, manually upload only the new/unique images from `processed_webp/` to your WordPress media library (specifically to the media folder associated with this project). This step helps prevent redundant uploads.
         Note: The script's report on which images are 'already on WordPress' is based on your `lineage/complete_image_lineage.csv` file. Ensure this file is current by running `scripts/download_and_append_urls.sh` (Step 3.4) and `scripts/merge_wordpress_data.py` (Step 4) after any manual uploads for the most accurate results from `check_image_status.sh` on subsequent runs.
     *   On your WP Engine server, find the wordpress filenames and URLs using the WP-CLI command and create a remote file with this info (Phase 3, Step 3.3):
         ```bash
