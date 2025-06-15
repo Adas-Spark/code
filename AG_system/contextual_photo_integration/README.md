@@ -88,8 +88,13 @@ This section provides a concise summary of the commands needed to run the entire
     python scripts/verify_processing.py
     ```
 
-3.  **Upload to WordPress, Export URLs with WP-CLI, and Download/Append:**
-    *   Manually upload the contents of the `processed_webp/` folder to your WordPress media library (as described in Phase 3, Step 3.2). Note: Only upload new files. This is a brittle part of the pipeline and should be automated.
+3.  **Check Image Status, Upload to WordPress, Export URLs, and Download/Append:**
+    *   Run the `check_image_status.sh` script to identify local duplicates and images already on WordPress:
+        ```bash
+        bash scripts/check_image_status.sh
+        ```
+        Review the script's output, which includes detailed file lists and a final summary of statistics, to understand the status of your images. Then, manually upload only the new/unique images from `processed_webp/` to your WordPress media library (specifically to the media folder associated with this project). This step helps prevent redundant uploads.
+        Note: The script's report on which images are 'already on WordPress' is based on your `lineage/complete_image_lineage.csv` file. Ensure this file is current by running `scripts/download_and_append_urls.sh` (Step 3.4) and `scripts/merge_wordpress_data.py` (Step 4) after any manual uploads for the most accurate results from `check_image_status.sh` on subsequent runs.
     *   On your WP Engine server, find the wordpress filenames and URLs using the WP-CLI command and create a remote file with this info (Phase 3, Step 3.3):
         ```bash
         # Example: ssh your_env@your_env.ssh.wpengine.net "cd sites/your_env && wp post list --post_type=attachment --fields=post_name,guid --format=csv | grep -- '-adasstory' > wordpress_urls.csv"
@@ -201,14 +206,30 @@ Now upload your processed images to WordPress and capture their permanent URLs.
 
 Before uploading, log in to WordPress and install a **Media Library Folders plugin** (like Filebird). Create a new folder named "Ada's Story Project" to keep your images organized and separate from other media.
 
-#### **Step 3.2: Bulk Upload Processed Images**
+#### **Step 3.2: Check Image Status and Manually Upload Necessary Images**
 
-Navigate to your WordPress Media Library folder and bulk upload all `.webp` files from your local `processed_webp/` folder created in Phase 2.
+Before uploading, it's crucial to identify which images need to be uploaded to avoid duplicates and resolve any local file issues.
 
-**Benefits of bulk upload via WordPress interface:**
-- Faster than API uploads for 1,000+ images
-- Better error handling and progress visibility
-- Native WordPress optimization and organization
+1.  **Run the Image Status Check Script:**
+    Execute the `check_image_status.sh` script:
+    ```bash
+    bash AG_system/contextual_photo_integration/scripts/check_image_status.sh
+    ```
+    This script performs two main checks:
+    *   **Local Duplicate Detection:** It looks for any files within your `processed_webp/` folder that have identical content (based on MD5 checksums) and reports them.
+    *   **WordPress Existing Image Check (via Lineage File):** It checks images from `processed_webp/` against the `lineage/complete_image_lineage.csv` file. An image is considered "already on WordPress" if its MD5 checksum is found in this lineage file *and* is associated with a WordPress URL (or GUID/post_name) in that same record. It also categorizes images found in lineage but missing a URL, and images not found in lineage at all.
+        **Important:** The accuracy of this WordPress status check depends entirely on the `complete_image_lineage.csv` file being up-to-date. This means you must have successfully run the `scripts/download_and_append_urls.sh` (Step 3.4) and `scripts/merge_wordpress_data.py` (Step 4) scripts after your last batch of manual image uploads for `check_image_status.sh` to accurately identify recently uploaded images.
+    The script will output detailed lists of files in each category, followed by a summary of counts (total unique files, local duplicate sets, and files in each WordPress status category based on lineage).
+
+2.  **Review and Prepare for Upload:**
+    Carefully review the output of `check_image_status.sh` (both the detailed lists and the summary statistics). Based on its report:
+    *   Address any local duplicates found.
+    *   Identify the subset of images in `processed_webp/` that are *not* yet on WordPress and are unique. These are the files you need to upload.
+
+3.  **Manually Upload to WordPress:**
+    Navigate to your WordPress Media Library (ideally to the "Ada's Story Project" folder you created in Step 3.1) and bulk upload only the necessary `.webp` files from your local `processed_webp/` folder. Using the WordPress interface for this manual upload is generally robust.
+
+This process, guided by the `check_image_status.sh` script, ensures you only upload new, unique images, preventing clutter and potential issues in your WordPress media library.
 
 #### **Step 3.3: Export WordPress URLs using WP-CLI**
 
