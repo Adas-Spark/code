@@ -40,11 +40,12 @@ project_root/
 │   ├── merge_wordpress_data.py
 │   └── final_enrichment.py
 │
-├── .gitignore                 # USER-CREATED: Tells Git which files and folders to ignore.
 ├── credentials.json           # USER-CREATED: Your secret credentials from Google Cloud. (Ignored by Git).
 ├── README.md                  # USER-CREATED: This project documentation file.
 ├── wordpress_urls.csv         # USER-CREATED: Manually exported from WordPress after uploading WebP files.
 └── FINAL_MASTER_DATA.csv      # AUTO-GENERATED: The final, enriched output of the entire pipeline.
+
+Note: User-managed directories (like `takeout_extracted/`), auto-generated directories (like `original_downloads/`, `processed_webp/`, `lineage/`), and user-created data files (like `wordpress_urls.csv`, `credentials.json`) as well as the final output (`FINAL_MASTER_DATA.csv`) are typically managed locally and may be included in the project's main `.gitignore` file at the repository root. They are described here for completeness of the workflow.
 
 ### **Prerequisites**
 
@@ -79,7 +80,7 @@ This section provides a concise summary of the commands needed to run the entire
     ```bash
     python scripts/process_downloaded_images.py
     ```
-
+    
 2.5.  **(Optional) Verify Processing:** Run the verification script to confirm all images were processed successfully.
 
     ```bash
@@ -165,7 +166,6 @@ Create the processing script that transforms images from `original_downloads/` i
 - `processing_lineage.csv` - Tabular format for Phase 3 integration, now based on Takeout data.
 
 After running the main processing script, you can use the optional `scripts/verify_processing.py` script to programmatically confirm that all expected files were processed successfully.
-
 
 #### **Step 2.4: Lineage Benefits**
 

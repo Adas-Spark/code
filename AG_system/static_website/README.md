@@ -21,13 +21,15 @@ A modern, responsive web interface for searching Ada's memories using semantic s
 AG_system/static_website/
 ├── index.html          # Main HTML structure for the standalone search interface
 ├── styles.css          # CSS styling and responsive design
-├── app.js             # Vue.js app and vanilla JavaScript functionality
+├── app.js              # Vue.js app and vanilla JavaScript functionality
+├── package.json        # Project dependencies and scripts (e.g., for local server)
+├── simple-server.js    # Basic Node.js server for local development/testing
 ├── api/
 │   ├── search.js       # Main search API endpoint
 │   └── questions.js    # Dynamic example questions API endpoint
-├── README.md          # This documentation
-├── prompt.md          # Prompt for recreating this app (if applicable)
-└── vercel.json        # Vercel configuration for API deployment
+├── README.md           # This documentation
+├── prompt.md           # Prompt for recreating this app (if applicable)
+└── vercel.json         # Vercel configuration for API deployment
 API Integration**: Perform a search to ensure front-end → API communication works
 
 ### WordPress Integration - Final Step
@@ -419,7 +421,7 @@ The `index.html` file includes a meta tag to instruct browsers on how to handle 
 
 -   **Connection**: Use port `2222` with `-P` flag (capital P).
     ```bash
-    sftp -P 2222 adasspark-joelswenson@adasspark.sftp.wpengine.com
+    sftp -P 2222 <YOUR_SFTP_USERNAME>@<YOUR_SFTP_HOST>
     ```
     > **Security Note**: Be cautious about storing full SFTP credentials in public documentation.
 -   **Directory**: Navigate to `memory-engine` folder after connecting.
