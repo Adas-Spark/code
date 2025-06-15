@@ -89,7 +89,11 @@ This section provides a concise summary of the commands needed to run the entire
     ```
 
 3.  **Upload to WordPress, Export URLs with WP-CLI, and Download/Append:**
-    *   Manually upload the contents of the `processed_webp/` folder to your WordPress media library (as described in Phase 3, Step 3.2). Note: Only upload new files. This is a brittle part of the pipeline and should be automated.
+    *   Run the automated script to upload new images from `processed_webp/` to your WordPress media library:
+        ```bash
+        bash scripts/upload_images_to_wordpress.sh
+        ```
+        This script will check for existing images and only upload new ones. Ensure your `.env` file is correctly configured.
     *   On your WP Engine server, find the wordpress filenames and URLs using the WP-CLI command and create a remote file with this info (Phase 3, Step 3.3):
         ```bash
         # Example: ssh your_env@your_env.ssh.wpengine.net "cd sites/your_env && wp post list --post_type=attachment --fields=post_name,guid --format=csv | grep -- '-adasstory' > wordpress_urls.csv"
@@ -203,12 +207,19 @@ Before uploading, log in to WordPress and install a **Media Library Folders plug
 
 #### **Step 3.2: Bulk Upload Processed Images**
 
-Navigate to your WordPress Media Library folder and bulk upload all `.webp` files from your local `processed_webp/` folder created in Phase 2.
+Use the `upload_images_to_wordpress.sh` script to upload your processed `.webp` files from the local `processed_webp/` directory to your WordPress Media Library.
 
-**Benefits of bulk upload via WordPress interface:**
-- Faster than API uploads for 1,000+ images
-- Better error handling and progress visibility
-- Native WordPress optimization and organization
+```bash
+bash AG_system/contextual_photo_integration/scripts/upload_images_to_wordpress.sh
+```
+
+**Key features of this script:**
+- **Automated Upload:** Leverages WP-CLI and SSH for direct command-line uploading.
+- **Duplicate Prevention:** Checks for already existing images on WordPress (based on filename/post_name) and only uploads new files.
+- **Configuration:** Requires the `.env` file in the `AG_system/contextual_photo_integration/` directory to be correctly configured with your `REMOTE_USER`, `REMOTE_HOST`, and `REMOTE_SITE_PATH` (the path to your WordPress installation on the server).
+- **Output:** The script will echo the `wp media import` commands it *would* run. (Note: actual execution of these commands might be implemented in a future version of the script; currently, it performs a dry run).
+
+This automated approach replaces the previous manual bulk upload process, providing a more reliable and scriptable method for getting your images into WordPress.
 
 #### **Step 3.3: Export WordPress URLs using WP-CLI**
 
