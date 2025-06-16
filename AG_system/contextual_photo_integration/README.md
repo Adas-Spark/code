@@ -445,6 +445,29 @@ The generated captions will be embedded and stored in Pinecone alongside your ex
 
 This section details various scripts that can help diagnose issues or perform specific utility functions within the project.
 
+### **Troubleshooting and Utility Scripts**
+
+This section details various scripts that can help diagnose issues or perform specific utility functions within the project.
+
+#### **`safe_merge_thumbnail_data.py` - Fixing Misplaced Lineage Files**
+
+*   **Purpose:** This utility script resolves a specific issue where `generate_thumbnails.py` creates a `processing_lineage.json` file in the project root instead of the `lineage/` directory, causing data structure conflicts.
+*   **The Problem:** 
+    *   Root file: Dictionary structure with thumbnail metadata keyed by image stems
+    *   Lineage file: Array structure with complete processing records including MD5 hashes
+    *   Attempting to merge these incompatible structures causes `AttributeError: 'str' object has no attribute 'get'`
+*   **The Solution:** 
+    *   Safely extracts thumbnail metadata from the misplaced root file
+    *   Matches records by filename stems derived from `final_filename` field
+    *   Merges thumbnail data into the proper lineage array structure
+    *   Cleans up the misplaced file to prevent future conflicts
+*   **When to Use:** Run this script if you encounter the above error or find a `processing_lineage.json` file in your project root that should be in `lineage/`
+*   **How to Use:**
+    ```bash
+    python safe_merge_thumbnail_data.py
+    ```
+*   **Safety:** The script preserves all existing data and only removes the misplaced file after successful merge completion.
+
 #### **`targeted_check.sh` - Diagnosing Filename Discrepancies**
 
 *   **Purpose:** This script is designed to help debug issues where specific files are not merging correctly between `lineage/processing_lineage.csv` and `lineage/wordpress_urls.csv`. This often occurs due to subtle filename mismatches (e.g., case differences, spaces vs. hyphens, presence/absence of special characters).
