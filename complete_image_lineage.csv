@@ -1,0 +1,3 @@
+original_filename,url,other_column
+image1.webp,gs://fake-bucket/image1.webp,data1
+image2.jpg,gs://fake-bucket/image2.jpg,data2
