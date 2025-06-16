@@ -24,7 +24,7 @@ for index, row in master_df.iterrows():
         image_part = Part.from_uri(wp_url, mime_type="image/webp")  
           
         # The prompt for the AI model  
-        prompt = "TBD - See Caption Generation Prompt Strategy"  
+        prompt = "TBD - See Caption Generation Prompt Strategy in README.md"  
           
         response = vision_model.generate_content([image_part, prompt])  
         caption = response.text.strip()  

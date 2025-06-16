@@ -360,9 +360,9 @@ prompts = {
     "medical_journey": "Describe this moment in a child's medical journey with sensitivity"
 }
 
-# Include context on Ada's story
+# Include context on Ada's story?
 context = """This image is from Ada's story - a brave 5-year-old girl 
-who fought leukemia with remarkable spirit. Some photos are from before she was diagnosed. Important dates: she was born 6-8-18, diagnosed 5-5-22, bone marrow transplant from her brother on 9-13-22, and died 7-22-23. When describing, be sensitive to the medical journey while celebrating moments of joy and connection."""
+who fought leukemia with remarkable spirit. Some photos are from before she was diagnosed. Important dates: she was born 6-8-18, diagnosed 5-5-22, bone marrow transplant from her brother on 9-13-22, and died 7-22-23. It is possible that some photos have the incorrect date. When describing, be sensitive to the medical journey while celebrating moments of joy and connection."""
 ```
 
 caption_prompt = """
