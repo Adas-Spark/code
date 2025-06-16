@@ -28,6 +28,13 @@ class TakeoutProcessor:
         self.processed_hashes = set()
         self.load_existing_lineage()
 
+        self.skipped_duplicates_count = 0
+        self.missing_json_count = 0
+        self.successful_processing_count = 0
+        self.warning_processing_count = 0
+        self.error_processing_count = 0 # for 'error_processing_json'
+        self.total_files_scanned = 0
+
     def load_existing_lineage(self):
         """Loads the existing lineage CSV to avoid reprocessing files."""
         lineage_csv_path = self.lineage_dir / 'download_lineage.csv'
@@ -125,15 +132,18 @@ class TakeoutProcessor:
 
             if not lineage_record['error_message']:
                 lineage_record['status'] = 'processed'
+                self.successful_processing_count += 1 # Increment successful_processing_count
                 # UPDATED PRINT STATEMENT
                 print(f"{progress_prefix} ✅ Processed new file: {lineage_record['original_filename']}")
             else:
                 lineage_record['status'] = 'processed_with_warnings'
+                self.warning_processing_count += 1 # Increment warning_processing_count
                 # UPDATED PRINT STATEMENT
                 print(f"{progress_prefix} ⚠️ Processed with warnings: {lineage_record['original_filename']} - {lineage_record['error_message']}")
 
         except Exception as e:
             lineage_record['status'] = 'error_processing_json'
+            self.error_processing_count += 1 # Increment error_processing_count
             lineage_record['error_message'] += f"Error: {e}. "
             # UPDATED PRINT STATEMENT
             print(f"{progress_prefix} ❌ Error processing JSON for {media_file_path.name}: {e}")
@@ -152,6 +162,7 @@ class TakeoutProcessor:
                     media_files_to_process.append(Path(root) / filename)
         
         total_files = len(media_files_to_process)
+        self.total_files_scanned = total_files # Initialize total_files_scanned
         if total_files == 0:
             print("No media files found in the specified directory.")
             return
@@ -167,6 +178,7 @@ class TakeoutProcessor:
             if file_hash in self.processed_hashes:
                 # UPDATED PRINT STATEMENT
                 print(f"{progress_prefix} ⏭️  Skipping duplicate content: {media_file_path.name}")
+                self.skipped_duplicates_count += 1 # Increment skipped_duplicates_count
                 continue
             
             json_file_path = self.find_json_metadata_file(media_file_path)
@@ -177,6 +189,7 @@ class TakeoutProcessor:
             else:
                 # UPDATED PRINT STATEMENT
                 print(f"{progress_prefix} ⚠️ Warning: Missing JSON for media file: {media_file_path}")
+                self.missing_json_count += 1 # Increment missing_json_count
                 lineage_record = {
                     'md5_hash': file_hash,
                     'original_takeout_path': str(media_file_path),
@@ -216,6 +229,20 @@ class TakeoutProcessor:
             df.to_csv(csv_path, index=False, encoding='utf-8')
         
         print(f"\nLineage data saved to {json_path} and {csv_path}")
+
+        print("\n--- Summary Statistics ---")
+        print(f"Total media files encountered: {self.total_files_scanned}")
+        print(f"Successfully processed: {self.successful_processing_count}")
+        print(f"Processed with warnings: {self.warning_processing_count}")
+        print(f"Skipped (duplicate content): {self.skipped_duplicates_count}")
+        print(f"Missing JSON metadata: {self.missing_json_count}")
+        print(f"Errors during JSON processing: {self.error_processing_count}")
+        # Calculate remaining files that were neither processed, skipped, nor explicitly errored (e.g. initial scan vs. actual processing attempts)
+        # This is a bit complex as some errors (like missing JSON) are counted separately.
+        # The sum of successful, warning, skipped, missing_json, and error_processing should ideally cover all total_files_scanned.
+        # Let's ensure the logic correctly covers all cases or adjust the summary.
+        # For now, the categories above are the most critical ones requested.
+        print("------------------------\n")
 
 def main():
     parser = argparse.ArgumentParser(description="Process Google Takeout data, with duplicate content detection.")
