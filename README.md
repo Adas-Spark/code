@@ -22,6 +22,9 @@ This project is composed of several key systems:
     *   This component is currently under development. See [Project Status Document](./PROJECT_STATUS.md) for the latest updates.
     * Q&A Generation & Merging: Manual Q&A generation followed by `AG_system/proof_of_concepts/QC_and_merge_jsons.ipynb` for merging and JSON validation.
     * Embedding QC & Vector DB Operations (Pinecone): `AG_system/proof_of_concepts/pincecone/visualization_analysis.ipynb` for embedding quality control, and `AG_system/proof_of_concepts/pincecone/pinecone_poc.ipynb` for uploading embeddings to Pinecone.
+    * **Suggestion for Future Enhancement:** To potentially optimize performance and reduce token usage, consider experimenting with sending thumbnails (instead of full-resolution images, where appropriate) to the image-to-text models used in the `AG_system/contextual_photo_integration/scripts/final_enrichment.py` script. This could be particularly relevant for generating brief descriptions or captions.
+
+**Important Note on Deployment:** Before uploading or making significant changes to the images or related data on your WP-engine instance (especially after processing data from this system), it is strongly recommended to perform a full backup of your WP-engine environment. It's also a good practice to take another backup after the changes have been successfully implemented.
 
 ## Associated Utilities
 
