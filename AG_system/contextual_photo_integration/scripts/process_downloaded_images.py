@@ -16,7 +16,7 @@ class ImageProcessor:
         self.MAX_DIMENSION = 1920
         self.FILENAME_TAG = '-adasstory'
         
-        # NEW: State-aware properties
+        # State-aware properties
         self.all_processing_records = []
         self.processed_hashes = set()
         self.load_existing_lineage()
@@ -132,7 +132,7 @@ def main():
     
     processor = ImageProcessor()
     
-    # NEW: Filter out images that have already been processed
+    # Filter out images that have already been processed
     unprocessed_df = download_df[~download_df['md5_hash'].isin(processor.processed_hashes)]
     total_to_process = len(unprocessed_df)
 
@@ -153,11 +153,11 @@ def main():
         processing_record = processor.process_image_with_lineage(record)
         processor.all_processing_records.append(processing_record)
 
-        # NEW: Add the hash to the set of processed hashes for the current session
+        # Add the hash to the set of processed hashes for the current session
         if md5_hash and processing_record.get('processing_status') == 'completed':
             processor.processed_hashes.add(md5_hash)
     
-    # NEW: Save all records (old and new)
+    # Save all records (old and new)
     processor.save_lineage()
     
     successful_processing = len([r for r in processor.all_processing_records if r.get('processing_status') == 'completed'])

@@ -20,7 +20,7 @@ print("\nStarting Vertex AI enrichment...")
 
 for index, row in master_df.iterrows():  
     try:  
-        wp_url = row['wordpress_url'] # Adjust column name if needed  
+        wp_url = row['url'] # Adjust column name if needed  
         image_part = Part.from_uri(wp_url, mime_type="image/webp")  
           
         # The prompt for the AI model  
