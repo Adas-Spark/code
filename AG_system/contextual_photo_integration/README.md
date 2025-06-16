@@ -134,7 +134,7 @@ The goal of this phase is to download all your photos and their corresponding me
 
 1.  Go to [Google Takeout](https://takeout.google.com/).
 2.  Deselect all products, then select **Google Photos**.
-3.  Choose the option to "Select all photo albums" or select specific albums you wish to export.
+3.  Choose the option to "Select all photo albums" or select specific albums you wish to export. Note that you will only be allowed to export items that you are the "owner" of and then only the photos that you "own" inside the album that you "own". The workaround is to open the shared album (do this in a somewhat clean google photos account), "save" all the photos to your library, then at the photos page in google photos find "recently added" on the left. Add the appropriate pictures to a new album, then google takeout should see it.
 4.  Configure the export settings:
     *   **Delivery method:** "Send download link via email" is common.
     *   **Frequency:** "Export once."
@@ -390,6 +390,30 @@ DETAILS: [your detailed description]
   - Cost per image
 
 **Decision criteria:** Choose the model that best balances caption quality with cost-effectiveness for your 1,000+ image scale.
+
+----- in progress -----
+Generate captions for this image using each of these prompts:
+prompts = {
+    "emotional": "Describe the emotional moment and feelings in this image of a young girl's journey",
+    "contextual": "What story does this image tell about childhood resilience?",
+    "descriptive": "Describe what you see, focusing on the people and their interactions",
+    "MOMENT": "A brief, poetic description of the emotional moment or action (15-20 words)
+   Focus on: what's happening, the feeling, the discovery, the connection
+   Example: "The wonder of discovering a butterfly on a sunny afternoon"",
+    "DETAILS": "Specific visual and contextual information (30-40 words)
+   Include: Who's in the photo (young girl, family members), setting, activities, 
+   medical context if visible, season/time indicators
+   Example: "A young girl in a yellow dress gently observes a monarch butterfly 
+   in a hospital garden. Her careful movements show both curiosity and gentleness."",
+   "Zero-shot": "Describe this photo in detail"
+}
+
+Format your response as:
+emotional: [your description from that prompt],
+contextual: [your description from that prompt],
+etc
+----- in progress -----
+
 
 #### **Step 4.2: The Final Enrichment Script**
 
