@@ -32,13 +32,15 @@ project_root/
 │   ├── download_lineage.json
 │   ├── processing_lineage.csv
 │   ├── processing_lineage.json
-│   └── complete_image_lineage.csv
+│   ├── complete_image_lineage.csv
+│   ├── image_caption_experiments.json # AUTO-GENERATED: Stores results of multiple AI caption generation experiments.
 │
 ├── scripts/                   # USER-CREATED: All the Python scripts for the project.
 │   ├── prepare_takeout_data.py
 │   ├── process_downloaded_images.py
 │   ├── merge_wordpress_data.py
 │   ├── final_enrichment.py
+│   ├── generate_final_csv.py
 │   └── verify_processing.py
 │
 ├── credentials.json           # USER-CREATED: Your secret credentials from Google Cloud. (Ignored by Git).
@@ -111,10 +113,15 @@ This section provides a concise summary of the commands needed to run the entire
     python scripts/merge_wordpress_data.py
     ```
 
-5.  **Enrich with AI Captions:** Run the final script to generate AI captions. *(Note: You must first edit the script to set your GCP Project ID and a specific AI prompt).*
+5.  **Enrich with AI Captions:** Run the enrichment script to generate AI captions using multiple prompts. This script now outputs `lineage/image_caption_experiments.json`. *(Note: You must first edit `scripts/final_enrichment.py` to set your GCP Project ID).*
 
     ```bash
     python scripts/final_enrichment.py
+    ```
+
+5.5. **Generate Final CSV:** Run the `generate_final_csv.py` script to process the `image_caption_experiments.json` and produce the `FINAL_MASTER_DATA.csv` file.
+    ```bash
+    python scripts/generate_final_csv.py
     ```
 
 **Phase 1: Data Extraction with Google Takeout**
@@ -299,69 +306,83 @@ This is the final step where all data, now sourced from Google Takeout and proce
 Install the necessary Vertex AI library:  
 pip install google-cloud-aiplatform
 
-#### Step 4.15: Caption Model Evaluation (Pre-Implementation)
+#### Step 4.15: AI Caption Generation with Multiple Prompts
 
-Before running the full pipeline, conduct a comparative test of caption generation models:
+The `final_enrichment.py` script is designed to facilitate the testing of multiple AI-generated caption approaches for each image. Instead of manually conducting a pre-implementation test with a small subset, this script automates the generation of captions using various prompts for all images in your `complete_image_lineage.csv`.
 
-**Test Setup:**
-- Select 20-30 representative photos from your dataset
-- Generate captions using both:
-  - Vertex AI (Gemini Pro Vision) 
-  - Claude-3.5-Sonnet or GPT-4V via API
-- Note that perhaps I want two captions per photo (see below)
-- Develop and test multiple prompt approaches to optimize caption quality: (Note that model won't know who is Ada in the picture if there is more than one person in the picture, I'll have to think about how to deal with that in the prompt)
-  - Emotional focus: "Describe Ada's emotional state and the moment's context..."
-  - Activity focus: "What is Ada doing in this image and what does it reveal about her personality..."
-  - Story integration: "How does this moment fit into Ada's larger journey..." (should I provide an overview of the story for the model to have in context?)
-  - Technical description: "Describe the visual elements, setting, and people in this image..."
-  - Zero Shot: "Describe this photo in detail."
-- Should test prompts systematically:
+**How it Works:**
+- The script iterates through each image.
+- For each image, it iterates through a predefined list of prompts (which you can configure within `final_enrichment.py`).
+- It calls the configured Vertex AI model (e.g., Gemini Pro Vision) for each image-prompt combination.
+- The example prompts below illustrate the types of prompts you might define in the script:
 ```python
-prompts = {
-    "emotional": "Describe the emotional moment and feelings in this image of a young girl's journey",
-    "contextual": "What story does this image tell about childhood resilience?",
-    "descriptive": "Describe what you see, focusing on the people and their interactions",
-    "medical_journey": "Describe this moment in a child's medical journey with sensitivity"
-}
-
-# Include context on Ada's story
-context = """This image is from Ada's story - a brave 5-year-old girl 
-who fought leukemia with remarkable spirit. Some photos are from before she was diagnosed. Important dates: she was born 6-8-18, diagnosed 5-5-22, bone marrow transplant from her brother on 9-13-22, and died 7-22-23. When describing, be sensitive to the medical journey while celebrating moments of joy and connection."""
+prompts_to_test = [
+    {
+        "prompt_id": "emotional_v1",
+        "prompt_text": "Describe the emotional moment and feelings in this image of a young girl's journey. This image is from Ada's story - a brave 5-year-old girl who fought leukemia with remarkable spirit. Some photos are from before she was diagnosed. Important dates: she was born 6-8-18, diagnosed 5-5-22, bone marrow transplant from her brother on 9-13-22, and died 7-22-23. When describing, be sensitive to the medical journey while celebrating moments of joy and connection."
+    },
+    {
+        "prompt_id": "descriptive_v1",
+        "prompt_text": "Describe what you see in this image, focusing on the people, setting, and their interactions. This image is from Ada's story - a brave 5-year-old girl who fought leukemia with remarkable spirit. Some photos are from before she was diagnosed. Important dates: she was born 6-8-18, diagnosed 5-5-22, bone marrow transplant from her brother on 9-13-22, and died 7-22-23. Be sensitive to the medical journey."
+    },
+    {
+        "prompt_id": "story_integration_v1",
+        "prompt_text": "How does this moment fit into Ada's larger journey? Ada was a brave 5-year-old girl who fought leukemia. Born 6-8-18, diagnosed 5-5-22, BMT from brother 9-13-22, died 7-22-23. Focus on resilience, connection, or challenges depicted."
+    }
+]
 ```
+*(The above is an example; refer to `final_enrichment.py` for the actual prompts used).*
 
-caption_prompt = """
-Generate two captions per photo? The "Moment" one could be attached to a photo and that photo could be served somewhat randomly until I get semantic matching of photos working
+**Output of Experiments:**
+The results of these caption generation experiments are stored in `lineage/image_caption_experiments.json`. This JSON file contains a list of objects, where each object corresponds to an image and includes:
+- `image_identifier`: The WordPress URL or original filename.
+- `lineage_data`: The original row of data for that image from `complete_image_lineage.csv`.
+- `caption_experiments`: A list of results, one for each prompt tested. Each result includes:
+    - `prompt_id`: Identifier for the prompt used.
+    - `prompt_text`: The full text of the prompt.
+    - `generated_caption`: The caption produced by the AI.
+    - `model_used`: The AI model used.
+    - `timestamp`: When the caption was generated.
+    - `selected`: A boolean field (default `False`) that you can later manually or programmatically set to `True` to mark a preferred caption for an image.
+    - `error`: Any error message if the caption generation failed for that specific prompt.
 
-1. MOMENT: A brief, poetic description of the emotional moment or action (15-20 words)
-   Focus on: what's happening, the feeling, the discovery, the connection
-   Example: "The wonder of discovering a butterfly on a sunny afternoon"
+**Using the Results:**
+You can review `lineage/image_caption_experiments.json` to:
+- Compare the effectiveness of different prompts across your image set.
+- Identify which prompts yield the most emotionally accurate, semantically rich, or contextually appropriate captions.
+- Inform your decision on which caption(s) to ultimately use for each image. You might manually update the `selected: true` field in this JSON for your preferred captions before generating the final CSV, or use this data to refine prompts for future runs.
 
-2. DETAILS: Specific visual and contextual information (30-40 words)
-   Include: Who's in the photo (young girl, family members), setting, activities, 
-   medical context if visible, season/time indicators
-   Example: "A young girl in a yellow dress gently observes a monarch butterfly 
-   in a hospital garden. Her careful movements show both curiosity and gentleness."
+#### **Step 4.2: The Final Enrichment Script (`final_enrichment.py`)**
 
-Format your response as:
-MOMENT: [your moment description]
-DETAILS: [your detailed description]
-"""
+This script takes the `complete_image_lineage.csv` (which includes original metadata from Takeout JSONs, processing details, and WordPress URLs) as input. For each image, it iterates through a defined set of prompts (see Step 4.15) and calls the Vertex AI API to generate captions.
 
-- Evaluate based on:
-  - Emotional accuracy (captures Ada's state/context)
-  - Semantic richness (useful for vector search)
-  - Consistency with Ada's story tone
-  - Cost per image
+**Input:** `complete_image_lineage.csv`
+**Processing:**
+1.  Reads each image entry from the input CSV.
+2.  For each image, loops through a list of predefined prompts.
+3.  Calls the Vertex AI API (e.g., Gemini Pro Vision) with the image and each prompt.
+4.  Collects all generated captions, prompt details, model information, and timestamps.
+**Output:** A file named `lineage/image_caption_experiments.json`. This JSON file stores a detailed record of all caption generation attempts for every image and every prompt. Its structure is detailed in Step 4.15. This file serves as an intermediate data store before the final CSV is generated.
 
-**Decision criteria:** Choose the model that best balances caption quality with cost-effectiveness for your 1,000+ image scale.
+#### **Step 4.3: Generating the Master CSV File (`generate_final_csv.py`)**
 
-#### **Step 4.2: The Final Enrichment Script**
+This script processes the `lineage/image_caption_experiments.json` file to produce the final, flattened CSV dataset.
 
-This master script will take the `complete_image_lineage.csv` (which includes original metadata from Takeout JSONs, processing details, and WordPress URLs) and call the Vertex AI API for enrichment.
-
-**final_enrichment.py**
-
-* **Output:** A file named **FINAL_MASTER_DATA.csv**. This is your final product, a single source of truth containing every piece of information for each photo (original metadata from Takeout, processing details, WordPress URL, AI-generated captions), ready for you to use in populating your Pinecone database.
+**Input:** `lineage/image_caption_experiments.json`
+**Processing:**
+1.  Reads the JSON file containing all caption experiments.
+2.  For each image, it iterates through every caption experiment that was performed (i.e., for every prompt tested).
+3.  It creates a new row for each experiment by combining the original `lineage_data` for the image with the specific details from that experiment.
+4.  This means an image that had three prompts tested against it will result in three rows in the output CSV. These rows will share the same lineage data but will differ in their caption-related columns.
+**Output:** `FINAL_MASTER_DATA.csv`. This CSV file contains all the original lineage data for each image, plus the following columns derived from each caption experiment:
+    - `prompt_id`: The identifier of the prompt used.
+    - `prompt_text`: The full text of the prompt.
+    - `ai_description`: The AI-generated caption for that prompt (renamed from `generated_caption` in the JSON).
+    - `caption_model_used`: The model used for that specific caption.
+    - `caption_timestamp`: The timestamp of when that caption was generated.
+    - `caption_selected`: The boolean value indicating if this caption was marked as selected.
+    - `caption_error`: Any error message recorded during that caption generation.
+This file is your final product, ready for populating your Pinecone database or for other analytical purposes.
 
 ### ---
 
