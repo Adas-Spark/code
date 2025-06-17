@@ -1,4 +1,5 @@
 import pandas as pd
+from pathlib import Path
 import vertexai
 from vertexai.preview.generative_models import GenerativeModel, Part
 --- Configuration ---
@@ -7,15 +8,16 @@ LOCATION = "us-central1"           # The GCP region for Vertex AI
 MODEL_NAME = "gemini-pro-vision"   # The generative model for vision tasks
 --- Main Logic ---
 def final_enrich_data():
-# Initialize Vertex AI
-vertexai.init(project=PROJECT_ID, location=LOCATION)
-# Load the vision model
-vision_model = GenerativeModel(MODEL_NAME)
-# Load merged lineage data from Phase 3
-master_df = pd.read_csv('complete_image_lineage.csv')
+    base_dir = Path(__file__).resolve().parent.parent
+    # Initialize Vertex AI
+    vertexai.init(project=PROJECT_ID, location=LOCATION)
+    # Load the vision model
+    vision_model = GenerativeModel(MODEL_NAME)
+    # Load merged lineage data from Phase 3
+    master_df = pd.read_csv(base_dir / 'lineage' / 'complete_image_lineage.csv')
   
 # --- AI Enrichment ---  
-ai_descriptions = []  
+    ai_descriptions = []
 print("\nStarting Vertex AI enrichment...")
 
 for index, row in master_df.iterrows():  
@@ -36,14 +38,14 @@ for index, row in master_df.iterrows():
         print(error_message)  
         ai_descriptions.append(error_message)  
           
-master_df['ai_description'] = ai_descriptions  
+    master_df['ai_description'] = ai_descriptions
   
 # Clean up and save  
-master_df.drop(columns=['file_stem_x', 'file_stem_y', 'filename'], inplace=True, errors='ignore')  
-master_df.to_csv('FINAL_MASTER_DATA.csv', index=False)  
+    master_df.drop(columns=['file_stem_x', 'file_stem_y', 'filename'], inplace=True, errors='ignore')
+    master_df.to_csv(base_dir / 'lineage' / 'FINAL_MASTER_DATA.csv', index=False)
   
-print("\n\n--- Process Complete ---")
-print("Final, unified dataset saved to 'FINAL_MASTER_DATA.csv'")
+    print("\n\n--- Process Complete ---")
+    print(f"Final, unified dataset saved to '{base_dir / 'lineage' / 'FINAL_MASTER_DATA.csv'}'")
 
 if __name__ == '__main__':
     final_enrich_data()
