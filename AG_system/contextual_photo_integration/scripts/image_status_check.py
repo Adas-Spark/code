@@ -83,7 +83,7 @@ def check_image_status():
             print(f"✅ Loaded lineage file with {len(lineage_df)} records")
             print(f"   Columns: {list(lineage_df.columns)}")
             
-            # Create lookup by processed file MD5 (for current files) and original MD5 (fallback)
+            # Create lookup by processed file MD5 (preferred) or original MD5 (fallback)
             lineage_by_hash = {}
             for _, row in lineage_df.iterrows():
                 # Use processed_file_md5 if available, otherwise fall back to original md5_hash
@@ -91,7 +91,7 @@ def check_image_status():
                 original_md5 = row.get('md5_hash')
                 
                 # Prefer processed MD5 for matching current files
-                lookup_md5 = processed_md5 if pd.notna(processed_md5) else original_md5
+                lookup_md5 = processed_md5 if pd.notna(processed_md5) and processed_md5 != '' else original_md5
                 
                 has_wp_url = pd.notna(row.get('url')) and row.get('url').strip()
                 if pd.notna(lookup_md5):
@@ -185,6 +185,13 @@ def check_image_status():
         print(f"\n--- Files Ready for Upload ({status_counts['not_in_lineage']}) ---")
         for file_path, status in all_files_status.items():
             if status == 'not_in_lineage':
+                thumb_status = "✅" if thumbnail_status.get(file_path, False) else "❌"
+                print(f"  {thumb_status} {file_path.name}")
+    
+    if status_counts.get('in_lineage_no_url', 0) > 0:
+        print(f"\n--- Files In Lineage But Missing WordPress URL ({status_counts['in_lineage_no_url']}) ---")
+        for file_path, status in all_files_status.items():
+            if status == 'in_lineage_no_url':
                 thumb_status = "✅" if thumbnail_status.get(file_path, False) else "❌"
                 print(f"  {thumb_status} {file_path.name}")
     

@@ -2,14 +2,13 @@
 
 The goal of this project is to take a specific album of approximately 1,000 images from your Google Photos account and transform them into a rich, searchable dataset that seamlessly integrates with your Ada's Spark Memory Engine. Currently, these photos exist as static files in Google Photos - valuable visual memories that tell Ada's story but remain disconnected from your semantic search system. Through this process, each image will be downloaded at maximum quality, processed locally with complete lineage tracking, optimized for web delivery, hosted permanently on your WordPress site, and enriched with AI-generated captions that capture the emotional context and narrative significance of each moment. The end result is a contextual photo system that can automatically serve relevant images alongside text-based Q&A responses, transforming your memory engine from a text-only experience into a rich multimedia journey through Ada's story. When users ask questions about Ada's experiences, personality, or journey, they'll not only receive thoughtful written answers but also see photos that emotionally resonate with and visually illustrate those memories.
 
-This process involves four main phases:
+This process involves five main phases:
 
 1. **Data Extraction:** Downloading your photos and their metadata using Google Takeout. Google Takeout allows you to export your Google Photos library, including original image files and accompanying JSON metadata files for each image.
-2. **Download & Processing:** Processing the downloaded original images from Google Takeout into optimized WebP files with complete lineage tracking throughout the transformation pipeline.
-3. **Hosting & URL Generation:** Uploading the processed WebP files to your WP Engine WordPress site to get a permanent, high-performance hosting URL for each image.  
-4. **Enrichment & Consolidation:** Merging all the data (extracted from Takeout JSONs and WordPress URLs) and then using Google's Vertex AI (Gemini) or another model (TBD) to generate a high-quality, descriptive caption for each image.
-5. **Vector Database Integration Strategy:** The generated captions will be embedded and stored in Pinecone alongside your existing Q&A pairs
-6. **Q&A integration experimentation:** Multiple approaches need testing to determine optimal photo-to-answer matching
+2. **Image Processing Pipeline:** Processing the downloaded original images from Google Takeout into optimized WebP files with complete lineage tracking throughout the transformation pipeline.
+3. **WordPress Hosting & URL Generation:** Uploading the processed WebP files to your WP Engine WordPress site to get a permanent, high-performance hosting URL for each image.  
+4. **Final Merge and AI Enrichment:** Merging all the data (extracted from Takeout JSONs and WordPress URLs) and then using Google's Vertex AI (Gemini) or another model (TBD) to generate a high-quality, descriptive caption for each image.
+5. **Vector Database Integration Strategy:** The generated captions will be embedded and stored in Pinecone alongside your existing Q&A pairs and Q&A integration experimentation with multiple approaches to determine optimal photo-to-answer matching.
 
 The final deliverable will be a single master CSV file containing all this information, ready to be used to populate your Pinecone vector database. This CSV will be built from the information extracted from the Google Takeout JSON files and subsequent processing steps.
 
@@ -104,43 +103,46 @@ During processing, files undergo transformations (format conversion, compression
 
 This section provides a concise summary of the commands needed to run the entire data processing pipeline.
 
-1.  **Prepare a Takeout Album:** Unzip a single Google Takeout album into a temporary staging folder (e.g., `takeout_extracted/`). Then run the preparation script, pointing it to the album's sub-folder. Repeat this step for each album.
+1.  **Phase 1 - Prepare a Takeout Album:** Unzip a single Google Takeout album into a temporary staging folder (e.g., `takeout_extracted/`). Then run the preparation script, pointing it to the album's sub-folder. Repeat this step for each album.
 
     ```bash
     python scripts/prepare_takeout_data.py takeout_extracted/Name-Of-Album-Folder/
     ```
 
-2.  **Process Images to WebP:** Run the processing script. It automatically finds all new images from the previous step and converts them to WebP.
+2.  **Phase 2 - Process Images to WebP:** Run the processing script. It automatically finds all new images from the previous step and converts them to WebP.
 
     ```bash
     python scripts/process_downloaded_images.py
     ```
 
-2.5.  **(Optional) Verify Processing:** Run the verification script to confirm all images were processed successfully and that lineage tracking is complete.
+2.1  **(Optional) Verify Processing:** Run the verification script to confirm all images were processed successfully and that lineage tracking is complete.
 
     ```bash
     python scripts/verify_processing.py
     ```
 
-2.6. **Generate Thumbnails:** Run the thumbnail generation script.
+2.2 **Generate Thumbnails:** Run the thumbnail generation script.
      This script creates smaller, web-optimized thumbnails for faster loading in contexts where full-size images are not immediately needed.
     ```bash
     python scripts/generate_thumbnails.py
     ```
-
-3.  **Pre-Upload Status Check:** Check what needs to be uploaded to avoid duplicates.
+2.4.5 **Add Processed File MD5s:** Enable accurate status checking by adding processed file MD5 hashes to lineage.
+```bash
+python scripts/fix_lineage_MD5s.py
+```  
+3.  **Phase 3 - Pre-Upload Status Check:** Check what needs to be uploaded to avoid duplicates.
     ```bash
     python scripts/image_status_check.py
     ```
     **Note:** This check shows accurate WordPress status using dual MD5 tracking (original download MD5s and processed file MD5s).
 
-4.  **Manual Upload to WordPress:**
+3.1  **Manual Upload to WordPress:**
     *   Review the status check output and identify which images need uploading
     *   Navigate to your WordPress Media Library (ideally to the "Ada's Story Project" folder)
     *   Upload the necessary `.webp` files from `processed_webp/` AND their corresponding thumbnails from `processed_webp_thumbnails/`
     *   Upload only files identified as needing upload to prevent redundant uploads
 
-5.  **Export WordPress URLs and Download Locally:**
+3.2  **Export WordPress URLs and Download Locally:**
     *   On your WP Engine server, export WordPress filenames and URLs using WP-CLI:
         ```bash
         # SSH to server: ssh your_env@your_env.ssh.wpengine.net
@@ -153,24 +155,23 @@ This section provides a concise summary of the commands needed to run the entire
         ```
         Ensure your `.env` file is correctly configured at `AG_system/contextual_photo_integration/.env` before running this.
 
-6.  **Merge WordPress URLs:** Run the merge script to combine the processing lineage with WordPress URLs.
+3.3  **Merge WordPress URLs:** Run the merge script to combine the processing lineage with WordPress URLs.
 
     ```bash
     python scripts/merge_wordpress_data.py
     ```
 
-7.  **Post-Merge Verification:** Verify that the upload and merge process worked correctly.
+3.4  **Post-Merge Verification:** Verify that the upload and merge process worked correctly.
     ```bash
     python scripts/image_status_check.py
     ```
     **Note:** After merging WordPress URLs, this check will accurately show which images are on WordPress vs. which still need uploading. Most images should now show as "✅ On WordPress" if the pipeline worked correctly.
 
-8.  **Enrich with AI Captions:** Run the final script to generate AI captions. *(Note: You must first edit the script to set your GCP Project ID and a specific AI prompt).*
+4.  **Phase 4 - Enrich with AI Captions:** Run the final script to generate AI captions. *(Note: You must first edit the script to set your GCP Project ID and a specific AI prompt).*
 
     ```bash
     python scripts/final_enrichment.py
     ```
-
 ---
 
 **Phase 1: Data Extraction with Google Takeout**
@@ -258,6 +259,26 @@ After the primary image processing is complete, thumbnails are generated using t
 *   **Output:**
     *   `processed_webp_thumbnails/` folder populated with thumbnail images.
     *   Updated `lineage/processing_lineage.json` with thumbnail-specific metadata for each image entry.
+
+#### **Step 2.4.5: Generate Thumbnails**
+This step adds processed_file_md5 hashes to the lineage data to enable accurate status checking and file matching.
+
+*   **Purpose:** The processing pipeline transforms files (WebP conversion, compression, resizing) which changes their MD5 hashes. This script calculates the MD5 of each processed file and adds it to the lineage alongside the original download MD5.
+
+*   **Process:**
+
+1. Calculates MD5 hashes for all files in processed_webp/
+2. Adds processed_file_md5 column to the complete image lineage
+3. Preserves original md5_hash values for complete audit trail
+4. Creates backup before making changes
+
+
+*   **Usage:**
+```bash
+python scripts/fix_lineage_MD5s.py
+```
+
+*   **Output:** Enhanced lineage data with dual MD5 tracking for accurate file matching in subsequent pipeline steps.
 
 #### **Step 2.5: Lineage Benefits**
 
@@ -491,24 +512,6 @@ The generated captions will be embedded and stored in Pinecone alongside your ex
 ### **Troubleshooting and Utility Scripts**
 
 This section details various scripts that can help diagnose issues or perform specific utility functions within the project.
-
-#### **`scripts/fix_lineage_MD5s.py` - Adding Processed File MD5s**
-
-*   **Purpose:** Adds `processed_file_md5` column to existing lineage files for pipelines created before version 2.1. Preserves original download MD5s while adding current file MD5s for accurate matching.
-*   **When to Use:** 
-    *   Upgrading from pipeline version < 2.1
-    *   Status check shows all files as "Ready for upload" despite being on WordPress
-    *   MD5 mismatches between lineage records and actual files
-*   **Usage:**
-    ```bash
-    python scripts/fix_lineage_MD5s.py
-    ```
-*   **What it does:**
-    *   Calculates current MD5s for all files in `processed_webp/`
-    *   Adds `processed_file_md5` column to lineage files
-    *   Preserves original `md5_hash` values for audit trail
-    *   Creates backup of original lineage file
-*   **Prevention:** Pipeline version 2.1+ automatically tracks both MD5 types
 
 #### **`scripts/cleanup_lineage_data.py` - Removing Failed Processing Records**
 
