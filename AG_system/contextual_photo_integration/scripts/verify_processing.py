@@ -7,9 +7,9 @@ def verify_processing_output():
     """
     Verifies that all successfully prepared files were successfully processed.
     """
-    lineage_dir = Path('lineage')
-    download_lineage_path = lineage_dir / 'download_lineage.csv'
-    processing_lineage_path = lineage_dir / 'processing_lineage.csv'
+    base_dir = Path(__file__).resolve().parent.parent
+    download_lineage_path = base_dir / 'lineage' / 'download_lineage.csv'
+    processing_lineage_path = base_dir / 'lineage' / 'processing_lineage.csv'
 
     # --- 1. Check if both lineage files exist ---
     if not download_lineage_path.exists() or not processing_lineage_path.exists():

@@ -5,8 +5,9 @@ def merge_thumbnail_data():
     """
     Safely merges thumbnail data from the misplaced root file into the proper lineage file.
     """
-    root_file = Path('processing_lineage.json')
-    lineage_file = Path('lineage/processing_lineage.json')
+    base_dir = Path(__file__).resolve().parent.parent
+    root_file = base_dir / 'processing_lineage.json'
+    lineage_file = base_dir / 'lineage' / 'processing_lineage.json'
     
     print("=== Merging Thumbnail Data ===")
     

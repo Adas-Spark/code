@@ -19,9 +19,10 @@ def fix_lineage_md5s():
     """
     print("=== Adding Processed File MD5s to Lineage ===")
     print("This preserves original MD5s while adding processed file MD5s for matching")
+    base_dir = Path(__file__).resolve().parent.parent
     
-    lineage_file = Path('lineage/complete_image_lineage.csv')
-    processed_dir = Path('processed_webp')
+    lineage_file = base_dir / 'lineage' / 'complete_image_lineage.csv'
+    processed_dir = base_dir / 'processed_webp'
     
     if not lineage_file.exists():
         print(f"❌ Lineage file not found: {lineage_file}")
