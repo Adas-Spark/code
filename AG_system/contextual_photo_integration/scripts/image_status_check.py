@@ -21,11 +21,12 @@ def check_image_status():
     Comprehensive image status check using pandas for reliable CSV parsing.
     """
     print("=== Python Image Status Check ===")
+    base_dir = Path(__file__).resolve().parent.parent
     
     # Define paths
-    processed_webp_dir = Path('processed_webp')
-    thumbnails_dir = Path('processed_webp_thumbnails')
-    lineage_file = Path('lineage/complete_image_lineage.csv')
+    processed_webp_dir = base_dir / 'processed_webp'
+    thumbnails_dir = base_dir / 'processed_webp_thumbnails'
+    lineage_file = base_dir / 'lineage' / 'complete_image_lineage.csv'
     
     print(f"Processed images directory: {processed_webp_dir}")
     print(f"Thumbnails directory: {thumbnails_dir}")

@@ -4,11 +4,13 @@ import datetime
 import pandas as pd
 import json
 from pathlib import Path
+import hashlib
 
 class ImageProcessor:
-    def __init__(self, processed_dir='processed_webp', lineage_dir='lineage'):
-        self.processed_dir = Path(processed_dir)
-        self.lineage_dir = Path(lineage_dir)
+    def __init__(self, base_dir):
+        self.base_dir = base_dir
+        self.processed_dir = base_dir / 'processed_webp'
+        self.lineage_dir = base_dir / 'lineage'
         self.processed_dir.mkdir(exist_ok=True)
         self.lineage_dir.mkdir(exist_ok=True) # Ensure lineage dir exists
         
@@ -137,8 +139,8 @@ class ImageProcessor:
         print(f"\nProcessing lineage saved to {csv_path} and {json_path}")
 
 def main():
-    lineage_dir = Path('lineage')
-    download_lineage_path = lineage_dir / 'download_lineage.csv'
+    base_dir = Path(__file__).resolve().parent.parent
+    download_lineage_path = base_dir / 'lineage' / 'download_lineage.csv'
     
     if not download_lineage_path.exists():
         print(f"❌ Error: Input file not found at '{download_lineage_path}'")
@@ -148,7 +150,7 @@ def main():
     print(f"Loading download records from '{download_lineage_path}'...")
     download_df = pd.read_csv(download_lineage_path).fillna('')
     
-    processor = ImageProcessor()
+    processor = ImageProcessor(base_dir)
     
     # Filter out images that have already been processed
     unprocessed_df = download_df[~download_df['md5_hash'].isin(processor.processed_hashes)]

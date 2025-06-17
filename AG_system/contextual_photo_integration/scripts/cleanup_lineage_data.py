@@ -7,10 +7,10 @@ def cleanup_lineage_data():
     Remove lineage records for files that don't actually exist,
     keeping only records for files that were successfully processed.
     """
-    lineage_dir = Path('lineage')
-    json_path = lineage_dir / 'processing_lineage.json'
-    csv_path = lineage_dir / 'processing_lineage.csv'
-    processed_dir = Path('processed_webp')
+    base_dir = Path(__file__).resolve().parent.parent
+    json_path = base_dir / 'lineage' / 'processing_lineage.json'
+    csv_path = base_dir / 'lineage' / 'processing_lineage.csv'
+    processed_dir = base_dir / 'processed_webp'
     
     print("Loading processing lineage...")
     

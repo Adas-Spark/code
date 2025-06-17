@@ -14,13 +14,13 @@ SUPPORTED_VIDEO_EXTENSIONS = ['.mp4', '.mov', '.m4v', '.3gp', '.mpg', '.mpeg', '
 SUPPORTED_EXTENSIONS = SUPPORTED_IMAGE_EXTENSIONS + SUPPORTED_VIDEO_EXTENSIONS
 
 class TakeoutProcessor:
-    def __init__(self, takeout_dir, output_dir='original_downloads', lineage_dir='lineage'):
-        self.takeout_dir = Path(takeout_dir)
+    def __init__(self, script_base_dir, takeout_dir_arg, output_dir_name='original_downloads', lineage_dir_name='lineage'):
+        self.takeout_dir = Path(takeout_dir_arg)
         if not self.takeout_dir.is_dir():
-            raise FileNotFoundError(f"Takeout directory not found: {takeout_dir}")
+            raise FileNotFoundError(f"Takeout directory not found: {takeout_dir_arg}")
 
-        self.output_dir = Path(output_dir)
-        self.lineage_dir = Path(lineage_dir)
+        self.output_dir = script_base_dir / output_dir_name
+        self.lineage_dir = script_base_dir / lineage_dir_name
         self.output_dir.mkdir(exist_ok=True)
         self.lineage_dir.mkdir(exist_ok=True)
         
@@ -249,7 +249,8 @@ def main():
     parser.add_argument("takeout_dir", help="Path to the directory of an unzipped Takeout album.")
     args = parser.parse_args()
     try:
-        processor = TakeoutProcessor(args.takeout_dir)
+        script_base_dir = Path(__file__).resolve().parent.parent
+        processor = TakeoutProcessor(script_base_dir, args.takeout_dir)
         processor.scan_takeout_directory()
         processor.save_lineage()
         print("\n✅ Processing complete!")

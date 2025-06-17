@@ -11,9 +11,10 @@ def extract_takeout_metadata():
     This script enhances the complete_image_lineage.csv with rich metadata from original Takeout exports.
     """
     print("=== Extracting Takeout Metadata ===")
+    base_dir = Path(__file__).resolve().parent.parent
     
     # Define paths
-    lineage_file = Path('lineage/complete_image_lineage.csv')
+    lineage_file = base_dir / 'lineage' / 'complete_image_lineage.csv'
     
     if not lineage_file.exists():
         print(f"❌ Error: Lineage file not found at {lineage_file}")
@@ -66,7 +67,7 @@ def extract_takeout_metadata():
             
             # Search for the JSON file in all takeout_extracted subdirectories
             found_json = None
-            takeout_dir = Path('takeout_extracted')
+            takeout_dir = base_dir / 'takeout_extracted'
             if takeout_dir.exists():
                 for json_candidate in takeout_dir.rglob(json_filename):
                     found_json = json_candidate
