@@ -170,8 +170,9 @@ python scripts/fix_lineage_MD5s.py
 4.  **Phase 4 - Enrich with AI Captions:** Run the final script to generate AI captions. *(Note: You must first edit the script to set your GCP Project ID and a specific AI prompt).*
 
     ```bash
-    python scripts/final_enrichment.py
+    python scripts/final_enrichment.py --model YOUR_MODEL_CHOICE [--ada-context] [--image-source thumbnail] [--limit X]
     ```
+    *(Note: You must first edit the `final_enrichment.py` script to set your GCP `PROJECT_ID` and ensure the chosen model is appropriate for your needs. The `--model` argument is required.)*
 ---
 
 **Phase 1: Data Extraction with Google Takeout**
@@ -486,10 +487,34 @@ Before running the full pipeline, conduct a comparative test of caption generati
 
 #### **Step 4.3: The Final Enrichment Script**
 
-The script `scripts/final_enrichment.py` takes the `lineage/complete_image_lineage.csv` (which includes original metadata from Takeout JSONs, processing details, and WordPress URLs) and calls the Vertex AI API for enrichment.
+The script `scripts/final_enrichment.py` is responsible for generating descriptive and contextual captions for each image using AI models. It takes the consolidated image data, sends requests to a specified AI model, and records the generated captions along with other relevant information.
 
-* **Input:** `lineage/complete_image_lineage.csv` with complete lineage data
-* **Output:** `FINAL_MASTER_DATA.csv` - Your final product, containing every piece of information for each photo (original metadata from Takeout, processing details including thumbnail generation status, WordPress URLs for both main image and thumbnail, and AI-generated captions), ready for you to use in populating your Pinecone database.
+*   **Input File**: The script primarily uses `lineage/complete_image_lineage.csv`. This file should contain essential columns like `url` (for the full-size image) and `wordpress_url_thumbnail` (if `--image-source thumbnail` is used).
+*   **Output File**: The script generates `lineage/multi_prompt_enrichment_output.csv`. This CSV file contains the original image data along with newly generated information for each prompt used, including:
+    *   The generated caption for each prompt type.
+    *   Token usage for the generation.
+    *   The status of the caption generation (e.g., success, error).
+    *   The `image_source_used` (e.g., 'full', 'thumbnail').
+    *   Temporal context information if `--ada-context` is used.
+*   **Command-Line Options**:
+    *   `--model`: (Required) Specifies the AI model to use (e.g., `gemini-1.5-flash-preview-0514`, `gemini-pro-vision`).
+    *   `--input-file`: Path to the input CSV file (defaults to `lineage/complete_image_lineage.csv`).
+    *   `--image-source`: Specifies whether to use `full` resolution images or `thumbnail` images for captioning (defaults to `full`).
+    *   `--ada-context`: If specified, enables the inclusion of Ada's temporal context (important life dates) in the prompts.
+    *   `--limit`: Limits the number of images to process (useful for testing).
+*   **Prompts Used**: The script utilizes a predefined set of prompts to generate diverse captions for each image. These typically include:
+    *   `EMOTIONAL`: Focuses on the emotional content of the image.
+    *   `MOMENT`: Aims for a brief, poetic description of the moment.
+    *   `CONTEXTUAL`: Seeks to understand the broader story or context.
+    *   `STORY`: Generates a narrative based on the image.
+    *   `CHARACTER`: Describes the people and their interactions.
+*   **Temporal Context**: When the `--ada-context` flag is used, the script incorporates awareness of Ada's important life dates (birth, diagnosis, transplant, passing) to provide more relevant and sensitive captions, especially when combined with the image's own timestamp.
+*   **GCP Project ID**: It is crucial to configure your Google Cloud `PROJECT_ID` directly within the `final_enrichment.py` script for it to authenticate and use Vertex AI services.
+*   **Usage Example**:
+    ```bash
+    python scripts/final_enrichment.py --model gemini-1.5-flash-preview-0514 --ada-context --image-source thumbnail --limit 10
+    ```
+    This example would process the first 10 images from the input CSV, using their thumbnails, incorporating Ada's temporal context, and utilizing the 'gemini-1.5-flash-preview-0514' model.
 
 ### ---
 
