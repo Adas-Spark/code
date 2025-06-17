@@ -49,20 +49,22 @@ def merge_wordpress_data():
     # Let's assume 'original_stem' from processing_lineage.json (e.g., "image-adasstory")
     # needs to be matched with a stem derived from 'filename' in wordpress_urls.csv.
     
+    # Normalize keys for merging
     def normalize_key_for_wp(series):
         # Extracts stem and normalizes: lowercase, replaces spaces with hyphens, removes tildes.
         return series.str.rsplit('.', n=1).str[0].str.lower().str.replace(' ', '-', regex=False).str.replace('~', '', regex=False)
 
     lineage_df['normalized_stem'] = normalize_key_for_wp(lineage_df['final_filename'])
     wordpress_df['normalized_stem'] = normalize_key_for_wp(wordpress_df['filename'])
-    
-    # Merge the data on the normalized stem
-    # We use 'original_stem' from lineage_df as it's the key from processing_lineage.json
-    # and 'normalized_stem' derived from wordpress_df['filename']
-    merged_df = pd.merge(lineage_df, wordpress_df, on='normalized_stem', how='left', suffixes=('_lineage', '_wp'))
 
-    # Add the new 'wordpress_url_thumbnail' field
-    merged_df['wordpress_url_thumbnail'] = np.nan
+    # Merge the data on the normalized stem
+    # Use processed_file_md5 if available, otherwise fall back to md5_hash for matching
+    def get_match_key(row):
+        processed_md5 = row.get('processed_file_md5') 
+        return processed_md5 if pd.notna(processed_md5) else row.get('md5_hash')
+
+    lineage_df['match_key'] = lineage_df.apply(get_match_key, axis=1)
+    merged_df = pd.merge(lineage_df, wordpress_df, on='normalized_stem', how='left', suffixes=('_lineage', '_wp'))
 
     for index, row in merged_df.iterrows():
         wp_url = row.get('url', '') # Get from wordpress_df columns

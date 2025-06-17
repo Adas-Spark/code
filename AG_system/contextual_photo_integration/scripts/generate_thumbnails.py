@@ -6,21 +6,22 @@ from PIL import Image
 base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 processed_webp_dir = os.path.join(base_dir, 'processed_webp')
 processed_webp_thumbnails_dir = os.path.join(base_dir, 'processed_webp_thumbnails')
-lineage_file_path = os.path.join(base_dir, 'processing_lineage.json')
+lineage_file_path = os.path.join(base_dir, 'lineage', 'processing_lineage.json')
 
 # Create thumbnails directory if it doesn't exist
 os.makedirs(processed_webp_thumbnails_dir, exist_ok=True)
 
-# Load processing_lineage.json
 if os.path.exists(lineage_file_path):
     try:
         with open(lineage_file_path, 'r') as f:
-            processing_lineage = json.load(f)
+            processing_lineage_list = json.load(f)
+        print(f"Loaded {len(processing_lineage_list)} records from lineage file")
     except json.JSONDecodeError:
         print(f"Warning: {lineage_file_path} is corrupted. Initializing empty lineage.")
-        processing_lineage = {}
+        processing_lineage_list = []
 else:
-    processing_lineage = {}
+    processing_lineage_list = []
+    print("No existing lineage file found. Starting fresh.")
 
 THUMBNAIL_HEIGHT = 360
 
@@ -30,24 +31,26 @@ def generate_thumbnails():
     skipped_existing = 0
     error_count = 0
 
+    lineage_by_filename = {}
+    for record in processing_lineage_list:
+        final_filename = record.get('final_filename')
+        if final_filename:
+            lineage_by_filename[final_filename] = record
+
     for filename in os.listdir(processed_webp_dir):
         if not filename.endswith(".webp"):
             continue
 
+        # Extract stem for thumbnail naming (remove .webp extension)
         original_stem = filename.split('.')[0]
-        # The -adasstory check is removed as per understanding that stem is just original filename without .webp
-        # if not original_stem.endswith("-adasstory"):
-        #     print(f"Skipping {filename} as it does not follow the '-adasstory' naming convention for stem.")
-        #     continue
-
         thumbnail_filename = f"{original_stem}-h{THUMBNAIL_HEIGHT}-thumb.webp"
         thumbnail_path = os.path.join(processed_webp_thumbnails_dir, thumbnail_filename)
         original_image_path = os.path.join(processed_webp_dir, filename)
 
-        # Initialize lineage entry for the original_stem if not present
-        if original_stem not in processing_lineage:
-            processing_lineage[original_stem] = {}
-        lineage_entry = processing_lineage[original_stem]
+        lineage_record = lineage_by_filename.get(filename)
+        if not lineage_record:
+            print(f"Warning: No lineage record found for {filename}")
+            continue
 
         try:
             if os.path.exists(thumbnail_path):
@@ -56,13 +59,13 @@ def generate_thumbnails():
                     thumbnail_width, thumbnail_height = thumb_img.size
                 thumbnail_file_size_bytes = os.path.getsize(thumbnail_path)
 
-                lineage_entry['thumbnail_final_filename'] = thumbnail_filename
-                lineage_entry['thumbnail_processed_path'] = thumbnail_path
-                lineage_entry['thumbnail_width'] = thumbnail_width
-                lineage_entry['thumbnail_height'] = thumbnail_height
-                lineage_entry['thumbnail_file_size_bytes'] = thumbnail_file_size_bytes
-                lineage_entry['thumbnail_generation_status'] = "success_skipped_existing"
-                lineage_entry['thumbnail_error_message'] = None
+                lineage_record['thumbnail_final_filename'] = thumbnail_filename
+                lineage_record['thumbnail_processed_path'] = thumbnail_path
+                lineage_record['thumbnail_width'] = thumbnail_width
+                lineage_record['thumbnail_height'] = thumbnail_height
+                lineage_record['thumbnail_file_size_bytes'] = thumbnail_file_size_bytes
+                lineage_record['thumbnail_generation_status'] = "success_skipped_existing"
+                lineage_record['thumbnail_error_message'] = None
                 print(f"Skipping existing thumbnail, metadata updated for: {thumbnail_filename}")
                 skipped_existing += 1
             else:
@@ -75,35 +78,35 @@ def generate_thumbnails():
                     resized_img.save(thumbnail_path, 'WEBP')
 
                     thumbnail_file_size_bytes = os.path.getsize(thumbnail_path)
-                    thumbnail_width, thumbnail_height = resized_img.size # Dimensions of the saved thumb
+                    thumbnail_width, thumbnail_height = resized_img.size
 
-                    lineage_entry['thumbnail_final_filename'] = thumbnail_filename
-                    lineage_entry['thumbnail_processed_path'] = thumbnail_path
-                    lineage_entry['thumbnail_width'] = thumbnail_width
-                    lineage_entry['thumbnail_height'] = thumbnail_height
-                    lineage_entry['thumbnail_file_size_bytes'] = thumbnail_file_size_bytes
-                    lineage_entry['thumbnail_generation_status'] = "success"
-                    lineage_entry['thumbnail_error_message'] = None
+                    lineage_record['thumbnail_final_filename'] = thumbnail_filename
+                    lineage_record['thumbnail_processed_path'] = thumbnail_path
+                    lineage_record['thumbnail_width'] = thumbnail_width
+                    lineage_record['thumbnail_height'] = thumbnail_height
+                    lineage_record['thumbnail_file_size_bytes'] = thumbnail_file_size_bytes
+                    lineage_record['thumbnail_generation_status'] = "success"
+                    lineage_record['thumbnail_error_message'] = None
                     print(f"Successfully generated thumbnail: {thumbnail_filename}")
+            
             processed_files += 1
 
         except Exception as e:
             print(f"Error processing {filename} (or its existing thumbnail {thumbnail_filename}): {e}")
-            lineage_entry['thumbnail_final_filename'] = thumbnail_filename # Store intended name
-            lineage_entry['thumbnail_processed_path'] = thumbnail_path # Store intended path
-            lineage_entry['thumbnail_generation_status'] = "failure"
-            lineage_entry['thumbnail_error_message'] = str(e)
-            # Optionally clear other fields if error occurs
-            lineage_entry.pop('thumbnail_width', None)
-            lineage_entry.pop('thumbnail_height', None)
-            lineage_entry.pop('thumbnail_file_size_bytes', None)
+            lineage_record['thumbnail_final_filename'] = thumbnail_filename
+            lineage_record['thumbnail_processed_path'] = thumbnail_path
+            lineage_record['thumbnail_generation_status'] = "failure"
+            lineage_record['thumbnail_error_message'] = str(e)
+            # Clear other fields if error occurs
+            lineage_record.pop('thumbnail_width', None)
+            lineage_record.pop('thumbnail_height', None)
+            lineage_record.pop('thumbnail_file_size_bytes', None)
             error_count += 1
-            processed_files +=1 # Count as processed even if error
+            processed_files += 1
 
-    # Save the updated processing_lineage dictionary
     try:
         with open(lineage_file_path, 'w') as f:
-            json.dump(processing_lineage, f, indent=4)
+            json.dump(processing_lineage_list, f, indent=2)
         print(f"Processing lineage saved to {lineage_file_path}")
     except IOError as e:
         print(f"Error saving processing lineage to {lineage_file_path}: {e}")

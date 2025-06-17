@@ -17,6 +17,7 @@ The final deliverable will be a single master CSV file containing all this infor
 
 This diagram outlines the complete folder and file structure of the project. Comments denote which items are created manually by the user versus those that are generated automatically by the processing scripts.
 
+```
 project_root/
 ├── takeout_extracted/         # USER-MANAGED: Temporary staging area for unzipping one Takeout album at a time.
 │
@@ -35,21 +36,30 @@ project_root/
 │   ├── download_lineage.json
 │   ├── processing_lineage.csv
 │   ├── processing_lineage.json
-│   └── complete_image_lineage.csv
+│   ├── complete_image_lineage.csv
+│   └── wordpress_urls.csv
 │
 ├── scripts/                   # USER-CREATED: All the Python scripts for the project.
 │   ├── prepare_takeout_data.py
 │   ├── process_downloaded_images.py
+│   ├── generate_thumbnails.py
+│   ├── image_status_check.py
 │   ├── merge_wordpress_data.py
 │   ├── final_enrichment.py
-│   └── verify_processing.py
+│   ├── verify_processing.py
+│   ├── download_and_append_urls.sh
+│   ├── targeted_check.sh
+│   ├── cleanup_lineage_data.py
+│   ├── safe_merge_thumbnail_data.py
+│   └── fix_lineage_MD5s.py
 │
 ├── credentials.json           # USER-CREATED: Your secret credentials from Google Cloud. (Ignored by Git).
 ├── README.md                  # USER-CREATED: This project documentation file.
-├── wordpress_urls.csv         # USER-CREATED: Manually exported from WordPress after uploading WebP files.
+├── .env                       # USER-CREATED: Environment variables for WP Engine SSH access.
 └── FINAL_MASTER_DATA.csv      # AUTO-GENERATED: The final, enriched output of the entire pipeline.
+```
 
-Note: User-managed directories (like `takeout_extracted/`), auto-generated directories (like `original_downloads/`, `processed_webp/`, `lineage/`), and user-created data files (like `wordpress_urls.csv`, `credentials.json`) as well as the final output (`FINAL_MASTER_DATA.csv`) are typically managed locally and may be included in the project's main `.gitignore` file at the repository root. They are described here for completeness of the workflow.
+Note: User-managed directories (like `takeout_extracted/`), auto-generated directories (like `original_downloads/`, `processed_webp/`, `lineage/`), and user-created data files (like `credentials.json`, `.env`) as well as the final output (`FINAL_MASTER_DATA.csv`) are typically managed locally and may be included in the project's main `.gitignore` file at the repository root. They are described here for completeness of the workflow.
 
 ### **Prerequisites**
 
@@ -67,7 +77,28 @@ Before you begin, make sure you have the following:
   * Application Default Credentials set up for Vertex AI (this is often handled automatically when you install the Google Cloud CLI and run gcloud auth application-default login).
   * Access to your Google Account to perform a Google Takeout.
 
-### ---
+### **Dual MD5 Tracking System**
+
+Starting with pipeline version 2.1+, the system tracks two types of MD5 hashes for complete lineage and accurate file matching:
+
+#### **MD5 Hash Types**
+- **`md5_hash`**: Original file MD5 from Google Takeout download (for audit trail)
+- **`processed_file_md5`**: Current processed WebP file MD5 (for accurate matching)
+
+#### **Why Dual Tracking?**
+During processing, files undergo transformations (format conversion, compression, resizing) that change their MD5 hashes. Tracking both allows:
+- ✅ **Complete audit trail** from original source to final processed file
+- ✅ **Accurate status checking** using current file hashes
+- ✅ **WordPress matching** with files as they actually exist
+- ✅ **Data integrity** without losing original source tracking
+
+#### **Pipeline Integration**
+- `scripts/prepare_takeout_data.py` records original download MD5s
+- `scripts/process_downloaded_images.py` calculates and stores processed file MD5s
+- `scripts/image_status_check.py` uses processed MD5s for accurate file matching
+- `scripts/merge_wordpress_data.py` merges data using filename-based matching (WordPress standard)
+
+---
 
 ### **Execution Workflow (Quick Start Guide)**
 
@@ -97,34 +128,50 @@ This section provides a concise summary of the commands needed to run the entire
     python scripts/generate_thumbnails.py
     ```
 
-3.  **Check Image Status, Upload to WordPress, Export URLs, and Download/Append:**
-    *   Run the `check_image_status.sh` script to identify local duplicates, images already on WordPress, and the status of thumbnails:
+3.  **Pre-Upload Status Check:** Check what needs to be uploaded to avoid duplicates.
+    ```bash
+    python scripts/image_status_check.py
+    ```
+    **Note:** This check shows accurate WordPress status using dual MD5 tracking (original download MD5s and processed file MD5s).
+
+4.  **Manual Upload to WordPress:**
+    *   Review the status check output and identify which images need uploading
+    *   Navigate to your WordPress Media Library (ideally to the "Ada's Story Project" folder)
+    *   Upload the necessary `.webp` files from `processed_webp/` AND their corresponding thumbnails from `processed_webp_thumbnails/`
+    *   Upload only files identified as needing upload to prevent redundant uploads
+
+5.  **Export WordPress URLs and Download Locally:**
+    *   On your WP Engine server, export WordPress filenames and URLs using WP-CLI:
         ```bash
-        bash scripts/check_image_status.sh
+        # SSH to server: ssh your_env@your_env.ssh.wpengine.net
+        # Navigate: cd sites/your_env
+        # Export: wp post list --post_type=attachment --fields=post_name,guid --format=csv | grep -- '-adasstory' > wordpress_urls.csv
         ```
-        Review the script's output, which includes detailed file lists and a final summary of statistics, to understand the status of your images and thumbnails. Then, manually upload only the new/unique images from `processed_webp/` and their corresponding thumbnails from `processed_webp_thumbnails/` to your WordPress media library (specifically to the media folder associated with this project). This step helps prevent redundant uploads.
-        Note: The script's report on which images are 'already on WordPress' is based on your `FINAL_MASTER_DATA.csv` file (or `complete_image_lineage.csv` if not yet at final stage). Ensure this file is current by running the necessary merge scripts (like `scripts/merge_wordpress_data.py`) after any manual uploads for the most accurate results from `check_image_status.sh` on subsequent runs.
-    *   On your WP Engine server, find the wordpress filenames and URLs for the full-size images using the WP-CLI command and create a remote file with this info (Phase 3, Step 3.3):
-        ```bash
-        # Example: ssh your_env@your_env.ssh.wpengine.net "cd sites/your_env && wp post list --post_type=attachment --fields=post_name,guid --format=csv | grep -- '-adasstory' > wordpress_urls.csv"
-        ```
-    *   Then, run the local script to download and append these URLs:
+    *   Download and append these URLs locally:
         ```bash
         chmod +x scripts/download_and_append_urls.sh && ./scripts/download_and_append_urls.sh
         ```
         Ensure your `.env` file is correctly configured at `AG_system/contextual_photo_integration/.env` before running this.
 
-4.  **Merge WordPress URLs:** Run the merge script to combine the processing lineage with your (now locally updated) WordPress URLs.
+6.  **Merge WordPress URLs:** Run the merge script to combine the processing lineage with WordPress URLs.
 
     ```bash
     python scripts/merge_wordpress_data.py
     ```
 
-5.  **Enrich with AI Captions:** Run the final script to generate AI captions. *(Note: You must first edit the script to set your GCP Project ID and a specific AI prompt).*
+7.  **Post-Merge Verification:** Verify that the upload and merge process worked correctly.
+    ```bash
+    python scripts/image_status_check.py
+    ```
+    **Note:** After merging WordPress URLs, this check will accurately show which images are on WordPress vs. which still need uploading. Most images should now show as "✅ On WordPress" if the pipeline worked correctly.
+
+8.  **Enrich with AI Captions:** Run the final script to generate AI captions. *(Note: You must first edit the script to set your GCP Project ID and a specific AI prompt).*
 
     ```bash
     python scripts/final_enrichment.py
     ```
+
+---
 
 **Phase 1: Data Extraction with Google Takeout**
 
@@ -144,7 +191,7 @@ The goal of this phase is to download all your photos and their corresponding me
 7.  Inside the extracted album folder, you will find your image files (e.g., `.jpg`, `.png`, `.heic`) alongside JSON files that contain the metadata. Each image typically has its own supplemental JSON file (e.g., `image_name.JPG` and `image_name.JPG.supplemental-metadata.json`).
 8.  **For a multi-album workflow:** After processing the first album, clear the staging directory and repeat step 6 for the next album's `.zip` file. The scripts are designed to add new photos without creating duplicates.
 
-* **Output:** A local directory containing the photo files and their associated JSON metadata files from a single Takeout album, ready for processing. The `prepare_takeout_data.py` script will be run on this directory. The `google_data.csv` file mentioned in previous versions of this documentation is no longer used; instead, scripts process the data directly from your Takeout export.
+* **Output:** A local directory containing the photo files and their associated JSON metadata files from a single Takeout album, ready for processing. The `scripts/prepare_takeout_data.py` script will be run on this directory.
 
 ### ---
 
@@ -165,34 +212,36 @@ Create your directory structure as illustrated in the "Project Directory Structu
 
 Since Google Takeout provides the original images directly, the primary task is to organize these files and parse the accompanying JSON metadata.
 
-A script `prepare_takeout_data.py` will:
+The script `scripts/prepare_takeout_data.py` will:
 1.  Read the directory of extracted Takeout files.
-2.  This script is state-aware. It loads the existing lineage/download_lineage.csv file at startup and uses MD5 hashes to automatically skip any images (by content) that have already been processed in previous runs.
+2.  This script is state-aware. It loads the existing `lineage/download_lineage.csv` file at startup and uses MD5 hashes to automatically skip any images (by content) that have already been processed in previous runs.
 3.  Parse relevant information from the JSON files (e.g., original filename, user caption (often `description` in the JSON), creation date (`photoTakenTime` -> `timestamp`), geolocation if available, etc.).
-4.  Copy or move image files to the `original_downloads/` directory, perhaps organized by date as originally planned, using the metadata from JSONs.
-5.  Store the extracted metadata in a structured way, possibly creating an initial version of the `lineage/download_lineage.json` or a new CSV file that will serve a similar purpose to the old `google_data.csv` but derived from Takeout.
+4.  Copy or move image files to the `original_downloads/` directory, organized by date, using the metadata from JSONs.
+5.  Store the extracted metadata in a structured way, creating `lineage/download_lineage.json` and `lineage/download_lineage.csv`.
 
-Run the prepare_takeout_data.py script, pointing it to the directory of a single extracted Takeout album (e.g., takeout_extracted/Ada_headshot_ish_photos).
+Run the `scripts/prepare_takeout_data.py` script, pointing it to the directory of a single extracted Takeout album (e.g., `takeout_extracted/Ada_headshot_ish_photos`).
 
-Note: Repeat this process for each album. The script will intelligently organize all photos chronologically into the same original_downloads/ directory.
+Note: Repeat this process for each album. The script will intelligently organize all photos chronologically into the same `original_downloads/` directory.
 
 #### **Step 2.3: Process Downloaded Images**
 
-Create the processing script that transforms images from `original_downloads/` into optimized WebP files:
+The script `scripts/process_downloaded_images.py` transforms images from `original_downloads/` into optimized WebP files:
 
-**process_downloaded_images.py** (This script will likely remain similar, but its input data source changes from API-downloaded files to Takeout-sourced files, using the metadata extracted in Step 2.2).
+* **Features (v2.1+):**
+  * Automatically skips video files to prevent processing failures
+  * Calculates both original download MD5s and processed file MD5s
+  * State-aware processing (skips already processed files)
+  * Complete transformation history tracking
 
 * **Output:**
-
-- `original_downloads/` folder containing original images from Takeout, organized by date.
-- `processed_webp/` folder containing optimized WebP files ready for WordPress upload.
-- `lineage/takeout_metadata_log.json` (or similar) - Log of metadata extracted from Takeout JSONs.
-- `lineage/processing_lineage.json` - Complete transformation history for each image.
-- `processing_lineage.csv` - Tabular format for Phase 3 integration, now based on Takeout data.
+  * `original_downloads/` folder containing original images from Takeout, organized by date.
+  * `processed_webp/` folder containing optimized WebP files ready for WordPress upload.
+  * `lineage/processing_lineage.json` - Complete transformation history for each image.
+  * `lineage/processing_lineage.csv` - Tabular format for Phase 3 integration.
 
 After running the main processing script, you can use the optional `scripts/verify_processing.py` script to programmatically confirm that all expected files were processed successfully and that lineage tracking is complete.
 
-#### **Step 2.3.5: Generate Thumbnails**
+#### **Step 2.4: Generate Thumbnails**
 
 After the primary image processing is complete, thumbnails are generated using the `scripts/generate_thumbnails.py` script.
 
@@ -203,33 +252,26 @@ After the primary image processing is complete, thumbnails are generated using t
     3.  If an existing thumbnail is found, the script skips the generation step for that image to save processing time. It will still attempt to gather metadata (dimensions, file size) from the existing file.
     4.  If no existing thumbnail is found, it generates a new one with a fixed height of 360 pixels, maintaining the original aspect ratio.
     5.  Thumbnails are saved (or confirmed to exist) in the `processed_webp_thumbnails/` directory.
-    6.  The naming convention for thumbnails is now `[original_stem]-h360-thumb.webp` (e.g., if the original is `image-adasstory.webp`, the thumbnail will be `image-adasstory-h360-thumb.webp`).
-    7.  Crucially, the script updates the `lineage/processing_lineage.json` file for each image (whether the thumbnail was newly generated or already existed), adding/updating metadata about the thumbnail. This includes its filename, path, dimensions, file size, and generation status (e.g., "success" or "success_skipped_existing").
+    6.  The naming convention for thumbnails is `[original_stem]-h360-thumb.webp` (e.g., if the original is `image-adasstory.webp`, the thumbnail will be `image-adasstory-h360-thumb.webp`).
+    7.  The script updates the `lineage/processing_lineage.json` file for each image, adding/updating metadata about the thumbnail.
 
 *   **Output:**
     *   `processed_webp_thumbnails/` folder populated with thumbnail images.
     *   Updated `lineage/processing_lineage.json` with thumbnail-specific metadata for each image entry.
 
-#### **Step 2.4: Lineage Benefits**
+#### **Step 2.5: Lineage Benefits**
 
 This Takeout-first approach provides complete traceability:
 
 - **Source tracking:** Original filename from Takeout, and any identifiers available in the JSON metadata.
-- **File integrity:** SHA256 checksums can still be used for verification post-Takeout and during processing.
+- **File integrity:** MD5 checksums for both original downloads and processed files.
 - **Transformation log:** Every resize, rotation, format change with timestamps.
 - **File evolution:** Original Takeout filename → final WordPress filename.
 - **Quality metrics:** File sizes before/after each step.
 - **Error handling:** Failed processing tracked with reasons.
 - **Audit trail:** Complete history for compliance and debugging.
 - **Local backup:** Original Takeout files are preserved.
-- **Thumbnail Metadata:** The `processing_lineage.json` file is updated by the thumbnail generation script with the following fields for each processed image:
-    - `thumbnail_final_filename`: The filename of the generated thumbnail (e.g., `image-adasstory-h360-thumb.webp`).
-    - `thumbnail_processed_path`: The full local path to the generated thumbnail.
-    - `thumbnail_width`, `thumbnail_height`: Dimensions of the thumbnail.
-    - `thumbnail_file_size_bytes`: File size of the thumbnail.
-    - `thumbnail_generation_status`: Indicates "success" or "failure".
-    - `thumbnail_error_message`: Contains any error message if thumbnail generation failed for an image.
-  This detailed tracking extends to the `FINAL_MASTER_DATA.csv`, which will include a `wordpress_url_thumbnail` field, derived from the main image's WordPress URL, to easily access the hosted thumbnail.
+- **Dual MD5 tracking:** Both original source MD5s and processed file MD5s for complete lineage.
 
 ### ---
 
@@ -246,25 +288,24 @@ Before uploading, log in to WordPress and install a **Media Library Folders plug
 Before uploading, it's crucial to identify which images need to be uploaded to avoid duplicates and resolve any local file issues.
 
 1.  **Run the Image Status Check Script:**
-    Execute the `check_image_status.sh` script:
+    Execute the `scripts/image_status_check.py` script:
     ```bash
-    bash AG_system/contextual_photo_integration/scripts/check_image_status.sh
+    python scripts/image_status_check.py
     ```
-    This script performs two main checks:
-    *   **Local Duplicate Detection:** It looks for any files within your `processed_webp/` folder that have identical content (based on MD5 checksums) and reports them.
-    *   **WordPress Existing Image Check (via Lineage File):** It checks images from `processed_webp/` against the `lineage/complete_image_lineage.csv` file. An image is considered "already on WordPress" if its MD5 checksum is found in this lineage file *and* is associated with a WordPress URL (or GUID/post_name) in that same record. It also categorizes images found in lineage but missing a URL, and images not found in lineage at all.
-        **Important:** The accuracy of this WordPress status check depends entirely on the `complete_image_lineage.csv` file being up-to-date. This means you must have successfully run the `scripts/download_and_append_urls.sh` (Step 3.4) and `scripts/merge_wordpress_data.py` (Step 4) scripts after your last batch of manual image uploads for `check_image_status.sh` to accurately identify recently uploaded images.
-    The script will output detailed lists of files in each category, followed by a summary of counts (total unique files, local duplicate sets, and files in each WordPress status category based on lineage).
+    This Python-based script provides reliable status checking with:
+    *   **Local Duplicate Detection:** Reports files with identical content (based on MD5 checksums)
+    *   **WordPress Status Check:** Uses dual MD5 tracking to accurately identify which files are already uploaded
+    *   **Thumbnail Status:** Reports missing or orphaned thumbnails
+    *   **Clear categorization:** Files are categorized as "✅ On WordPress", "⏳ In lineage, needs URL", or "📤 Ready for upload"
 
 2.  **Review and Prepare for Upload:**
-    Carefully review the output of `check_image_status.sh` (both the detailed lists and the summary statistics). Based on its report:
-    *   Address any local duplicates found.
-    *   Identify the subset of images in `processed_webp/` that are *not* yet on WordPress and are unique. These are the files you need to upload.
+    Carefully review the output of the status check. Based on its report:
+    *   Address any local duplicates found
+    *   Identify files marked as "📤 Ready for upload" - these need to be uploaded
+    *   Note files marked as "⏳ In lineage, needs URL" - these may already be uploaded but need URL merging
 
 3.  **Manually Upload to WordPress:**
-    Navigate to your WordPress Media Library (ideally to the "Ada's Story Project" folder you created in Step 3.1). Bulk upload the necessary `.webp` files from your local `processed_webp/` folder AND their corresponding thumbnails from the `processed_webp_thumbnails/` folder. Using the WordPress interface for this manual upload is generally robust. Ensure that both full-size images and their thumbnails are uploaded to the same WordPress media path structure if possible, so that the thumbnail URL can be reliably derived from the main image URL.
-
-This process, guided by the `check_image_status.sh` script, ensures you only upload new, unique images and their thumbnails, preventing clutter and potential issues in your WordPress media library.
+    Navigate to your WordPress Media Library (ideally to the "Ada's Story Project" folder). Bulk upload the necessary `.webp` files from your local `processed_webp/` folder AND their corresponding thumbnails from the `processed_webp_thumbnails/` folder. Upload both full-size images and their thumbnails to ensure complete media availability.
 
 #### **Step 3.3: Export WordPress URLs using WP-CLI**
 
@@ -286,8 +327,7 @@ This step involves using WP-CLI directly on your WP Engine server to export the 
     ```bash
     wp post list --post_type=attachment --fields=post_name,guid --format=csv | grep -- '-adasstory' > wordpress_urls.csv
     ```
-    This command lists all attachments, extracts their post name (slug) and GUID (URL), formats the output as CSV, and then filters for filenames containing `'-adasstory'` (or your chosen suffix) to capture only the relevant processed full-size images. The output is saved to `wordpress_urls.csv` in your site's root directory on the server. This file will primarily contain URLs for the full-size images. The `wordpress_url_thumbnail` that will eventually appear in `FINAL_MASTER_DATA.csv` is programmatically derived from these main image URLs by the `merge_wordpress_data.py` script (by inserting "-h360-thumb" into the filename component of the URL, e.g. `.../image-adasstory-h360-thumb.webp`), rather than being directly exported from WordPress.
-    **Note:** The `grep` suffix (`'-adasstory'`) might need to be adjusted based on the filename convention established in `process_downloaded_images.py`.
+    This command lists all attachments, extracts their post name (slug) and GUID (URL), formats the output as CSV, and then filters for filenames containing `'-adasstory'` to capture only the relevant processed full-size images. The output is saved to `wordpress_urls.csv` in your site's root directory on the server.
 
 #### **Step 3.4: Download and Append URLs**
 
@@ -302,39 +342,31 @@ This step uses the `scripts/download_and_append_urls.sh` script to securely down
     REMOTE_PATH="/sites/environmentname/wordpress_urls.csv"
     # (full path to the csv on the server)
     ```
-    Replace the placeholder values with your actual credentials and paths. For example:
-    ```
-    REMOTE_USER="mywpuser"
-    REMOTE_HOST="mysite.ssh.wpengine.net"
-    REMOTE_PATH="/sites/mysite/wordpress_urls.csv"
-    ```
+    Replace the placeholder values with your actual credentials and paths.
 
 2.  **Run the script:**
-    The script will:
-    *   Use `scp` to download `wordpress_urls.csv` from the `REMOTE_PATH` on your `REMOTE_HOST` using `REMOTE_USER`.
-    *   Create `lineage/wordpress_urls.csv` locally if it doesn't exist, adding the headers `filename,url`.
-    *   Append the newly downloaded URLs to this local file, skipping the header row from the downloaded file to avoid duplication.
+    ```bash
+    chmod +x scripts/download_and_append_urls.sh && ./scripts/download_and_append_urls.sh
+    ```
+    The script will use `scp` to download the WordPress URLs and append them to your local `lineage/wordpress_urls.csv` file.
 
-    This ensures that subsequent runs of `merge_wordpress_data.py` (Step 4 in the Quick Start Guide) will use the most up-to-date list of WordPress URLs.
-
-Output:
-
+**Output:**
 - All images hosted on WordPress with permanent URLs accessible via the server-generated `wordpress_urls.csv`.
-- `lineage/wordpress_urls.csv` file locally, containing an aggregated list of filenames and their corresponding WordPress URLs, ready for merging by `merge_wordpress_data.py`.
-- `complete_image_lineage.csv` (generated by `merge_wordpress_data.py` in a later step) - Full lineage from Google Takeout data, through local processing, to WordPress hosting.
-- Organized WordPress Media Library for easy management.
+- `lineage/wordpress_urls.csv` file locally, containing an aggregated list of filenames and their corresponding WordPress URLs.
+- `lineage/complete_image_lineage.csv` (generated by `scripts/merge_wordpress_data.py` in the next step) - Full lineage from Google Takeout data, through local processing, to WordPress hosting.
 
 ### ---
 
 **Phase 4: Final Merge and AI Enrichment**
 
-This is the final step where all data, now sourced from Google Takeout and processed locally, comes together.
+This is the final step where all data, sourced from Google Takeout and processed locally, comes together.
 
 #### **Step 4.1: Final Script Setup**
 
 Install the necessary Vertex AI library:  
+```bash
 pip install google-cloud-aiplatform
-
+```
 #### Step 4.15: Caption Model Evaluation (Pre-Implementation)
 
 Before running the full pipeline, conduct a comparative test of caption generation models:
@@ -415,17 +447,32 @@ etc
 ----- in progress -----
 
 
-#### **Step 4.2: The Final Enrichment Script**
+#### **Step 4.2: Caption Model Evaluation (Pre-Implementation)**
 
-This master script will take the `complete_image_lineage.csv` (which includes original metadata from Takeout JSONs, processing details, and WordPress URLs) and call the Vertex AI API for enrichment.
+Before running the full pipeline, conduct a comparative test of caption generation models:
 
-**final_enrichment.py**
+**Test Setup:**
+- Select 20-30 representative photos from your dataset
+- Generate captions using both:
+  - Vertex AI (Gemini Pro Vision) 
+  - Claude-3.5-Sonnet or GPT-4V via API
+- Test multiple prompt approaches to optimize caption quality
+- Consider generating two types of captions per photo:
+  - **MOMENT:** Brief, poetic description (15-20 words)
+  - **DETAILS:** Specific visual and contextual information (30-40 words)
 
-* **Output:** A file named **FINAL_MASTER_DATA.csv**. This is your final product, a single source of truth containing every piece of information for each photo (original metadata from Takeout, processing details including thumbnail generation status, WordPress URL for the main image, the derived WordPress URL for its thumbnail (e.g., `wordpress_url_thumbnail` like `https://example.com/image-adasstory-h360-thumb.webp`), and AI-generated captions), ready for you to use in populating your Pinecone database.
+**Decision criteria:** Choose the model that best balances caption quality with cost-effectiveness for your 1,000+ image scale.
+
+#### **Step 4.3: The Final Enrichment Script**
+
+The script `scripts/final_enrichment.py` takes the `lineage/complete_image_lineage.csv` (which includes original metadata from Takeout JSONs, processing details, and WordPress URLs) and calls the Vertex AI API for enrichment.
+
+* **Input:** `lineage/complete_image_lineage.csv` with complete lineage data
+* **Output:** `FINAL_MASTER_DATA.csv` - Your final product, containing every piece of information for each photo (original metadata from Takeout, processing details including thumbnail generation status, WordPress URLs for both main image and thumbnail, and AI-generated captions), ready for you to use in populating your Pinecone database.
 
 ### ---
 
-### Phase 5: Vector Database Integration Strategy
+### **Phase 5: Vector Database Integration Strategy**
 
 The generated captions will be embedded and stored in Pinecone alongside your existing Q&A pairs:
 
@@ -445,13 +492,45 @@ The generated captions will be embedded and stored in Pinecone alongside your ex
 
 This section details various scripts that can help diagnose issues or perform specific utility functions within the project.
 
-### **Troubleshooting and Utility Scripts**
+#### **`scripts/fix_lineage_MD5s.py` - Adding Processed File MD5s**
 
-This section details various scripts that can help diagnose issues or perform specific utility functions within the project.
+*   **Purpose:** Adds `processed_file_md5` column to existing lineage files for pipelines created before version 2.1. Preserves original download MD5s while adding current file MD5s for accurate matching.
+*   **When to Use:** 
+    *   Upgrading from pipeline version < 2.1
+    *   Status check shows all files as "Ready for upload" despite being on WordPress
+    *   MD5 mismatches between lineage records and actual files
+*   **Usage:**
+    ```bash
+    python scripts/fix_lineage_MD5s.py
+    ```
+*   **What it does:**
+    *   Calculates current MD5s for all files in `processed_webp/`
+    *   Adds `processed_file_md5` column to lineage files
+    *   Preserves original `md5_hash` values for audit trail
+    *   Creates backup of original lineage file
+*   **Prevention:** Pipeline version 2.1+ automatically tracks both MD5 types
 
-#### **`safe_merge_thumbnail_data.py` - Fixing Misplaced Lineage Files**
+#### **`scripts/cleanup_lineage_data.py` - Removing Failed Processing Records**
 
-*   **Purpose:** This utility script resolves a specific issue where `generate_thumbnails.py` creates a `processing_lineage.json` file in the project root instead of the `lineage/` directory, causing data structure conflicts.
+*   **Purpose:** Cleans processing lineage files by removing records for files that failed to process or don't exist, keeping only successful processing records.
+*   **Common Causes:**
+    *   Video files that were downloaded but can't be processed as images (`.mp4`, `.mov`, etc.)
+    *   Processing failures that left incomplete records
+    *   Files that were processed but later deleted or moved
+*   **Symptoms:** 
+    *   Status check shows all files as "Not In Lineage" even after merging
+    *   Processing lineage has more records than actual processed files
+    *   Many lineage records have `final_filename: null`
+*   **Solution:** 
+    ```bash
+    python scripts/cleanup_lineage_data.py
+    python scripts/merge_wordpress_data.py
+    ```
+*   **Prevention:** Updated `scripts/process_downloaded_images.py` (v2.1+) now skips video files automatically to prevent this issue.
+
+#### **`scripts/safe_merge_thumbnail_data.py` - Fixing Misplaced Lineage Files**
+
+*   **Purpose:** This utility script resolves a specific issue where `scripts/generate_thumbnails.py` creates a `processing_lineage.json` file in the project root instead of the `lineage/` directory, causing data structure conflicts.
 *   **The Problem:** 
     *   Root file: Dictionary structure with thumbnail metadata keyed by image stems
     *   Lineage file: Array structure with complete processing records including MD5 hashes
@@ -464,11 +543,30 @@ This section details various scripts that can help diagnose issues or perform sp
 *   **When to Use:** Run this script if you encounter the above error or find a `processing_lineage.json` file in your project root that should be in `lineage/`
 *   **How to Use:**
     ```bash
-    python safe_merge_thumbnail_data.py
+    python scripts/safe_merge_thumbnail_data.py
     ```
+*   **Prevention:** Fixed in `scripts/generate_thumbnails.py` (v2.1+) to use correct file paths.
 *   **Safety:** The script preserves all existing data and only removes the misplaced file after successful merge completion.
 
-#### **`targeted_check.sh` - Diagnosing Filename Discrepancies**
+#### **`scripts/image_status_check.py` - Python-based Status Checking**
+
+*   **Purpose:** Reliable Python-based replacement for the bash status check script. Provides accurate file categorization using pandas for robust CSV parsing.
+*   **Advantages over bash version:**
+    *   ✅ Handles complex CSV data (JSON fields with commas)
+    *   ✅ Uses dual MD5 tracking for accurate matching
+    *   ✅ Clear error messages and debugging information
+    *   ✅ Structured, readable output
+*   **Usage:**
+    ```bash
+    python scripts/image_status_check.py
+    ```
+*   **Output Categories:**
+    *   **✅ On WordPress**: Files with WordPress URLs in lineage
+    *   **⏳ In lineage, needs URL**: Files processed but missing WordPress URLs
+    *   **📤 Ready for upload**: Files not in lineage (typically from recent processing)
+    *   **❌ Other issues**: Parse errors or missing lineage file
+
+#### **`scripts/targeted_check.sh` - Diagnosing Filename Discrepancies**
 
 *   **Purpose:** This script is designed to help debug issues where specific files are not merging correctly between `lineage/processing_lineage.csv` and `lineage/wordpress_urls.csv`. This often occurs due to subtle filename mismatches (e.g., case differences, spaces vs. hyphens, presence/absence of special characters).
 *   **How it Works:**
@@ -478,14 +576,41 @@ This section details various scripts that can help diagnose issues or perform sp
 *   **Utility:** This script is particularly useful for quickly spotting the exact nature of a filename discrepancy. It was instrumental in identifying the need for more robust filename normalization during the development of the main processing scripts.
 *   **How to Use:**
     ```bash
-    cd AG_system/contextual_photo_integration/scripts/
+    cd scripts/
     ./targeted_check.sh
     ```
-    (Adjust the path if you are running it from the project root, e.g., `./AG_system/contextual_photo_integration/scripts/targeted_check.sh`). You may need to `chmod +x targeted_check.sh` first.
+    You may need to `chmod +x targeted_check.sh` first.
+
+#### **Common Pipeline Issues**
+
+**Issue: Status check shows all files as "Not In Lineage" despite being on WordPress**
+- **Cause:** MD5 mismatch between lineage records and actual files
+- **Solution:** Run `python scripts/fix_lineage_MD5s.py` to add processed file MD5s
+- **Prevention:** Use pipeline version 2.1+ with automatic dual MD5 tracking
+
+**Issue: Status check shows all files as "Ready for upload" but they're already uploaded**
+- **Cause:** Same as above - MD5 mismatch preventing proper matching
+- **Solution:** Run `python scripts/fix_lineage_MD5s.py`
+- **Verification:** After fix, re-run `python scripts/image_status_check.py`
+
+**Issue: Processing lineage has failed records with null final_filename**
+- **Cause:** Video files causing image processing failures
+- **Solution:** Run `python scripts/cleanup_lineage_data.py` to remove failed records
+- **Prevention:** Pipeline version 2.1+ automatically skips video files
+
+**Issue: Processing lineage in wrong location**
+- **Cause:** Bug in `scripts/generate_thumbnails.py` file path
+- **Solution:** Run `python scripts/safe_merge_thumbnail_data.py`
+- **Prevention:** Use updated `scripts/generate_thumbnails.py` with correct paths
+
+**Issue: CSV parsing errors in bash scripts**
+- **Cause:** Complex data (JSON) breaking simple comma-splitting logic
+- **Solution:** Use `python scripts/image_status_check.py` instead of bash version
+- **Prevention:** Prefer Python scripts for robust CSV handling
 
 ### ---
 
-### Q&A Integration Strategy (To Be Determined)
+### **Q&A Integration Strategy (To Be Determined)**
 
 Multiple approaches need testing to determine optimal photo-to-answer matching:
 
@@ -513,13 +638,14 @@ Multiple approaches need testing to determine optimal photo-to-answer matching:
 - Pros: Maintains narrative continuity
 - Cons: Limited to photos that have clear post associations
 
-**One idea: Hybrid with Post-Context (C+D)**
+**Hybrid with Post-Context (C+D) - Recommended Approach:**
 Combine Approach C (Hybrid Scoring) with D (Post-Context Matching):
 
 Primary matching: Semantic similarity (0.4 weight) + Sentiment (0.3 weight) + Post context (0.3 weight)
-Metadata structure:
 
-json{
+Metadata structure:
+```json
+{
   "image_url": "https://...",
   "caption": "AI-generated caption",
   "original_caption": "User caption from Google Photos",
@@ -528,12 +654,101 @@ json{
   "creation_date": "2019-03-15",
   "processing_date": "2025-06-13"
 }
+```
 
-**Implementation Strategy**
-Create partitions of your data with namespaces to ensure tenant isolation The vector database to build knowledgeable AI | Pinecone - Use Pinecone namespaces to separate:
-
-- photo-captions namespace for image embeddings
-- qa-answers namespace for text Q&A pairs
+**Implementation Strategy:**
+Create partitions of your data with namespaces using Pinecone namespaces to separate:
+- `photo-captions` namespace for image embeddings
+- `qa-answers` namespace for text Q&A pairs
 - This allows independent scaling and management
 
-**Next Steps:** Implement small-scale tests of each approach using your existing 300+ Q&A pairs and a subset of photos to evaluate user experience impact before choosing primary strategy.
+**Next Steps:** Implement small-scale tests of each approach using your existing Q&A pairs and a subset of photos to evaluate user experience impact before choosing primary strategy.
+
+---
+
+### **Pipeline Version History**
+
+**Version 2.1+ (Current)**
+- ✅ Dual MD5 tracking (original + processed file hashes)
+- ✅ Automatic video file skipping during processing
+- ✅ Python-based status checking with robust CSV parsing
+- ✅ Correct file paths for all scripts
+- ✅ Enhanced error handling and prevention
+- ✅ Complete thumbnail generation with lineage tracking
+- ✅ Reliable WordPress URL merging
+
+**Version 2.0 (Previous)**
+- ✅ Single MD5 tracking (original download hashes only)
+- ❌ Video files caused processing failures
+- ❌ Bash-based status checking with CSV parsing issues
+- ❌ Some file path bugs in thumbnail generation
+- ❌ Inconsistent lineage tracking
+
+**Migration from v2.0 to v2.1:** 
+Run `python scripts/fix_lineage_MD5s.py` to upgrade existing v2.0 lineage files to v2.1 format with dual MD5 tracking.
+
+---
+
+### **Development Notes**
+
+#### **File Naming Conventions**
+- **Original files:** Preserved exactly as they appear in Google Takeout
+- **Processed files:** `[original_stem]-adasstory.webp`
+- **Thumbnails:** `[original_stem]-adasstory-h360-thumb.webp`
+- **WordPress URLs:** Derived automatically from processed filenames
+
+#### **Error Handling Strategy**
+- **Graceful degradation:** Scripts continue processing even if individual files fail
+- **Comprehensive logging:** All errors logged with context for debugging
+- **State preservation:** Failed processing doesn't corrupt existing lineage data
+- **Recovery mechanisms:** Utility scripts available to fix common issues
+
+#### **Performance Considerations**
+- **Batch processing:** Images processed in batches with progress indicators
+- **Memory management:** Large images processed individually to prevent memory issues
+- **Network efficiency:** WordPress URL downloads use incremental updates
+- **Storage optimization:** WebP format provides excellent compression while maintaining quality
+
+#### **Security and Privacy**
+- **Credential management:** Google Cloud credentials stored locally and git-ignored
+- **SSH security:** WP Engine access uses SSH keys and environment variables
+- **Data isolation:** Each album processed independently to limit exposure
+- **Backup strategy:** Original files preserved throughout pipeline
+
+#### **Testing and Validation**
+- **Status verification:** Multiple validation scripts ensure data integrity
+- **Hash verification:** MD5 checksums validate file integrity throughout pipeline
+- **Lineage validation:** Complete audit trail from source to final output
+- **WordPress validation:** URLs tested for accessibility and correct serving
+
+---
+
+### **Future Enhancements**
+
+#### **Planned Features**
+- **Enhanced metadata:** EXIF data extraction and preservation in lineage
+
+#### **Scalability Considerations**
+- **Cloud processing:** Migration to cloud-based image processing for large datasets
+- **CDN integration:** Automatic WordPress CDN configuration for global image delivery
+- **Database sharding:** Strategies for handling tens of thousands of images
+- **API rate limiting:** Intelligent throttling for AI caption generation at scale
+
+---
+
+### **License and Usage**
+
+This project is part of the Ada's Spark Memory Engine initiative. The code and documentation are designed to preserve and make searchable the visual memories of Ada's journey. While the specific implementation is tailored to this use case, the techniques and approaches may be valuable for other memorial and archival projects.
+
+---
+
+### **Acknowledgments**
+
+This pipeline was developed to honor Ada's memory and make her story more accessible through visual search and AI-enhanced discovery. The technical approach prioritizes data integrity, emotional sensitivity, and long-term preservation of precious memories.
+
+Special thanks to the open-source community for the tools that make this pipeline possible:
+- **Pillow** for robust image processing
+- **Pandas** for reliable data manipulation  
+- **Google Cloud** for AI capabilities
+- **WordPress/WP Engine** for reliable hosting
+- **Pinecone** for vector search capabilities

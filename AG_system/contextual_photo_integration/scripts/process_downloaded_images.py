@@ -41,10 +41,21 @@ class ImageProcessor:
     
     def process_image_with_lineage(self, download_record):
         """Processes a single downloaded image into optimized WebP"""
-        # This check is still good practice.
         if download_record.get('status') not in ['processed', 'processed_with_warnings']:
             processing_record = download_record.copy()
             processing_record['processing_status'] = 'skipped_due_to_download_status'
+            return processing_record
+
+        # Skip video files early to avoid processing failures
+        original_filename = download_record.get('original_filename', '')
+        video_extensions = ['.mp4', '.mov', '.m4v', '.3gp', '.mpg', '.mpeg', '.avi', '.mkv']
+        if any(original_filename.lower().endswith(ext) for ext in video_extensions):
+            processing_record = download_record.copy()
+            processing_record.update({
+                'processing_status': 'skipped_video_file',
+                'processing_timestamp': datetime.datetime.now().isoformat(),
+                'processing_error': f'Skipped video file: {original_filename}'
+            })
             return processing_record
 
         processing_record = download_record.copy()
@@ -90,15 +101,22 @@ class ImageProcessor:
                 webp_quality = self.get_adaptive_quality(file_size_bytes)
                 img.save(output_path, 'webp', quality=webp_quality)
                 
+                # Calculate processed file MD5
+                processed_md5 = hashlib.md5(output_path.read_bytes()).hexdigest()
+                
                 processing_record.update({
                     'final_filename': new_filename,
                     'processed_file_path': str(output_path),
+                    'processed_file_md5': processed_md5,
                     'webp_quality': webp_quality,
                     'processing_status': 'completed'
                 })
             
         except Exception as e:
-            processing_record.update({ 'processing_status': 'processing_failed', 'processing_error': str(e) })
+            processing_record.update({ 
+                'processing_status': 'processing_failed', 
+                'processing_error': str(e) 
+            })
         
         return processing_record
 
