@@ -3,9 +3,39 @@
 .vscode/*
 
 # Python files
-**pycache**/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
 .ipynb_checkpoints/
 
 # Environment and data files
 .env
 *.db
+
+# System files (recursive)
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Virtual documents and temp files
+.virtual_documents/
+*/.virtual_documents/
+
+# Common credential and token files
+*.json
+*.pickle
+token.*
+credentials.*
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*~
