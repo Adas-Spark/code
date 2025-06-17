@@ -62,6 +62,89 @@ Note: User-managed directories (like `takeout_extracted/`), auto-generated direc
 
 ### **Prerequisites**
 
+### **Google Cloud SDK (gcloud) Setup**
+
+The Python scripts in this project use the Google Cloud SDK to communicate with Google Cloud services. Follow these steps to install and configure the SDK and prepare your project to run the enrichment pipeline.
+
+**Part 1: Installation and Authentication**
+
+1.  **Download the SDK Archive**
+    Go to the official Google Cloud SDK documentation page and download the appropriate archive for your system (e.g., macOS 64-bit). Your browser will typically save this to your Downloads folder.
+
+    *Google Cloud SDK Download Page* (Note: You'll need to find and insert the actual link here if available, or leave as plain text if not.)
+
+2.  **Position the SDK**
+    Using Finder (macOS) or your file explorer, move the downloaded `.tar.gz` file from your Downloads folder to your Home directory (the directory named after your username).
+
+3.  **Install from Terminal**
+    Open your terminal and run the following commands one by one. This will extract the SDK and run the installer.
+
+    ```bash
+    # Navigate to your Home directory
+    cd ~
+
+    # Extract the archive (use the actual filename you downloaded)
+    # Example: tar -xf google-cloud-sdk-YOUR_VERSION-darwin-x86_64.tar.gz
+    tar -xf google-cloud-sdk-darwin-x86_64.tar.gz
+
+    # Run the installation script
+    ./google-cloud-sdk/install.sh
+    ```
+    When the installer asks if you want to Modify your PATH, answer yes (Y).
+
+4.  **Update Your Current Terminal Session**
+    To make the `gcloud` command available immediately without restarting your terminal, run the following command to load the updated configuration (for Zsh, common on macOS. If you use Bash, it might be `source ~/.bashrc` or `source ~/.bash_profile`):
+
+    ```bash
+    source ~/.zshrc
+    ```
+
+5.  **Initialize the SDK**
+    This command will walk you through logging into your Google Account and selecting the Google Cloud project you want to use for this work.
+
+    ```bash
+    gcloud init
+    ```
+
+6.  **Set Up Application Default Credentials**
+    This final authentication step authorizes the Python scripts to use your credentials to access Google Cloud APIs.
+
+    ```bash
+    gcloud auth application-default login
+    ```
+
+**Part 2: Project Configuration**
+
+After initializing the SDK, you must configure your specific project to use the necessary services.
+
+1.  **Link a Billing Account**
+    A billing account is required to use services like Vertex AI. First, find your billing account ID:
+
+    ```bash
+    gcloud beta billing accounts list
+    ```
+    Copy the `ACCOUNT_ID` from the output, then use it to link billing to your project. Replace `[YOUR_PROJECT_ID]` and `[YOUR_BILLING_ACCOUNT_ID]` with your actual IDs.
+
+    ```bash
+    gcloud beta billing projects link [YOUR_PROJECT_ID] --billing-account=[YOUR_BILLING_ACCOUNT_ID]
+    ```
+
+2.  **Enable the Vertex AI API**
+    The project requires the Vertex AI API to be enabled.
+
+    ```bash
+    gcloud services enable aiplatform.googleapis.com
+    ```
+
+3.  **Set Default AI Region**
+    Configure your default region to match the one specified in the enrichment script (us-central1).
+
+    ```bash
+    gcloud config set ai/region us-central1
+    ```
+
+*Note: These instructions are current as of June 17, 2025. The Google Cloud platform and its tools evolve. For the most up-to-date information, always consult the official Google Cloud SDK documentation.*
+
 Before you begin, make sure you have the following:
 
 * **Accounts:**  
