@@ -52,3 +52,8 @@ credentials.*
 *.tmp
 *.temp
 *~
+
+# Additional project-specific excludes
+AG_system/contextual_photo_integration/takout_zips/
+AG_system/proof_of_concepts/generated_qa_pairs_combined_clean_20250603_214922.json
+generated_qa_pairs_initial_tests_not_in_production/
