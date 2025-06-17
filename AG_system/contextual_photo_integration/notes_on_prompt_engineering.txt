@@ -259,3 +259,81 @@ MOMENT: Laughter echoes across the lawn, a trio of siblings in the meadow. The i
 DETAILS: Three siblings – a young boy, baby girl and young lady – lie on a blue blanket spread out on green grass. The boy playfully makes glasses with his hands, while the baby gazes with wide eyes. The blonde girl smiles broadly amid nature's vibrant shades.
 
 Zero-shot: This photo shows three young siblings laying in grass on a blue blanket. The young boy is in a light blue shirt and making glasses with his hands. The baby in the middle is wearing a pink dress with a bow in her hair. The blonde girl is smiling to the right.
+
+---- Next Trial - test if thumbnail is big enough for caption ----
+I uploaded AG_system/contextual_photo_integration/processed_webp_thumbnails//IMG_6659-adasstory-h360-thumb.webp
+to https://console.cloud.google.com/vertex-ai/studio/multimodal, using gemini-2.5-pro-preview-06-05, with the following prompt. It utilized tokens as follows:
+Text
+1,195
+Images
+1,806
+Total tokens
+3,001
+
+----- Prompt ----
+Generate captions for this image using each of these prompts:
+prompts = {
+"emotional": "Describe the emotional moment and feelings in this image of a young girl's journey",
+"contextual": "What story does this image tell about childhood resilience?",
+"descriptive": "Describe what you see, focusing on the people and their interactions",
+"MOMENT": "A brief, poetic description of the emotional moment or action (15-20 words)
+Focus on: what's happening, the feeling, the discovery, the connection
+Example: "The wonder of discovering a butterfly on a sunny afternoon"",
+"DETAILS": "Specific visual and contextual information (30-40 words)
+Include: Who's in the photo (young girl, family members), setting, activities,
+medical context if visible, season/time indicators
+Example: "A young girl in a yellow dress gently observes a monarch butterfly
+in a hospital garden. Her careful movements show both curiosity and gentleness."",
+"Zero-shot": "Describe this photo in detail"
+}
+
+Format your response as:
+emotional: [your description from that prompt],
+contextual: [your description from that prompt],
+etc
+
+---- Response -----
+emotional: This image captures the pure, unadulterated joy of siblinghood. It's a moment overflowing with warmth and affection, where silly antics from an older brother elicit a radiant smile from his sister, all while the youngest sibling observes with wide-eyed wonder, securely nestled between them. It’s a snapshot of the beautiful, fleeting journey of growing up together.
+contextual: This image tells a story of childhood's inherent resilience—the ability to create a world of joy and connection from the simplest of things. On a simple blue blanket in a yard, these siblings build a fortress of happiness. Their individual personalities—the jester, the observer, and the joyous spirit—unite, demonstrating that the strongest defense against the complexities of the world is the simple, powerful bond of family.
+descriptive: Three young children are lying on their stomachs on a blue blanket spread across a lush green lawn. On the left, a young boy in a blue shirt playfully makes "goggles" over his eyes with his hands, his feet kicked up in the air. In the middle, a baby girl in a pink top and a white floral headband looks at the camera with large, curious eyes. On the right, a young girl with long blonde hair beams with a wide, happy smile.
+MOMENT: A perfect moment of sibling connection on a sunny lawn, full of goofy faces and pure, infectious laughter.
+DETAILS: Three young siblings—a boy, a girl, and a baby—lie on a blue blanket on a grassy lawn. The boy makes a silly face, his older sister smiles with delight, and the baby in pink looks on curiously.
+Zero-shot: Three children are lying in a row on their stomachs on a dark blue blanket in a grassy yard. On the left, a young boy with blond hair, wearing a light blue button-up shirt, makes circles around his eyes with his fingers. His feet, in white-soled shoes, are kicked up behind him. In the center is a baby with a white headband and a pink shirt, looking directly at the camera. On the right, a young girl with long blonde hair and a floral top smiles broadly, showing her teeth. The grass is green, and the background is softly out of focus.
+---- Next Trial ----
+I uploaded AG_system/contextual_photo_integration/processed_webp_thumbnails//IMG_6659-adasstory-h360-thumb.webp
+to https://console.cloud.google.com/vertex-ai/studio/multimodal, using gemini-2.0-flash-001, with the following prompt. It utilized tokens as follows:
+Text
+621
+Images
+1,806
+Total tokens
+2,427
+
+----- Prompt ----
+Generate captions for this image using each of these prompts:
+prompts = {
+"emotional": "Describe the emotional moment and feelings in this image of a young girl's journey",
+"contextual": "What story does this image tell about childhood resilience?",
+"descriptive": "Describe what you see, focusing on the people and their interactions",
+"MOMENT": "A brief, poetic description of the emotional moment or action (15-20 words)
+Focus on: what's happening, the feeling, the discovery, the connection
+Example: "The wonder of discovering a butterfly on a sunny afternoon"",
+"DETAILS": "Specific visual and contextual information (30-40 words)
+Include: Who's in the photo (young girl, family members), setting, activities,
+medical context if visible, season/time indicators
+Example: "A young girl in a yellow dress gently observes a monarch butterfly
+in a hospital garden. Her careful movements show both curiosity and gentleness."",
+"Zero-shot": "Describe this photo in detail"
+}
+
+Format your response as:
+emotional: [your description from that prompt],
+contextual: [your description from that prompt],
+etc
+---- Response -----
+emotional: [The uninhibited joy of childhood, expressed through playful gestures and genuine smiles, is contagious in this scene of sibling love and carefree fun.]
+contextual: [This image speaks of childhood resilience through the simple act of play. Despite any challenges, these children find joy and connection in each other's company, creating a safe and happy world on their blanket.]
+descriptive: [We see three young children lying on a blue blanket spread on a lush green lawn. A boy on the left makes binoculars with his hands, playfully peering through them. To his right, a baby in a pink outfit looks directly at the camera with wide, curious eyes. On the right, a slightly older girl beams a bright, genuine smile.]
+MOMENT: [Little eyes peer through homemade lenses, a toothy grin shines, tiny hands grasp. A shared moment creating a world of pure, unfiltered joy.]
+DETAILS: [A boy in a blue shirt uses his hands to make binoculars while lying on a blue blanket. A baby in a pink dress and headband is in the middle. A blonde girl in a floral dress smiles widely. They are all outdoors on green grass.]
+Zero-shot: [This photo shows three young children lying on a blue blanket spread out on green grass. The child on the left is a boy wearing a blue shirt and jeans. He is making binoculars with his hands in front of his eyes, and his feet are kicked up in the air. Next to him is a baby girl in a pink dress and white headband; she's looking directly at the camera. On the right is a blonde girl wearing a floral dress; she is smiling broadly. The background is out of focus, suggesting they are in a backyard or park.]
