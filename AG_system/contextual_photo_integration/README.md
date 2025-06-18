@@ -581,6 +581,30 @@ To evaluate different models or settings:
 
 By iteratively running the script with different configurations and evaluating the output, you can determine the optimal model, image source, and prompt settings for processing your entire photo collection. The script's stateful processing (it skips images+prompts that have already been successfully processed and exist in the output file, unless `--force-reprocess` is used) helps in efficiently resuming or extending evaluation runs.
 
+---------- OVERALL STRATEGY (note that this section should be moved probably) ----------
+🎯 Your Ada Photo Search & Recommendation System
+📸 Caption Generation Strategy:
+
+MOMENT caption: Generated for every image (15-20 word poetic descriptions)
+CONTEXTUAL caption: Generated for every image (detailed character/relationship/journey context)
+Cost-effective approach: Use thumbnails (28% savings, equivalent quality)
+
+🔍 Search & Discovery Flow:
+Step 1: Question Processing
+
+User asks question about Ada → embed question
+Search Pinecone for semantically similar question
+Return relevant answer from your QA knowledge base
+
+Step 2: Display 4 Photos Next to Relevant Answer
+Embed the answer displayed to the user
+2 images: Match answer using embedded MOMENT captions
+2 images: Match answer using embedded CONTEXTUAL captions
+Display strategy: Always show MOMENT caption to users (short, poetic, human-friendly)
+
+
+
+
 #### **Step 4.3: The Final Enrichment Script**
 
 The script `scripts/final_enrichment.py` is responsible for generating descriptive and contextual captions for each image using AI models. It takes consolidated image data, sends requests to a specified AI model, and records the generated captions along with other relevant information.
