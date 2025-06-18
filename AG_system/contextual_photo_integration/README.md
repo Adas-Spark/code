@@ -599,6 +599,10 @@ The script `scripts/final_enrichment.py` is responsible for generating descripti
     ```
     This example would process the first 10 images from the input CSV, using their thumbnails, incorporating Ada's temporal context, and utilizing the 'gemini-1.5-flash-preview-0514' model.
 
+* If you get authentication issues:
+# Set up authentication
+gcloud auth application-default login
+
 ### ---
 
 ### **Phase 5: Vector Database Integration Strategy**
