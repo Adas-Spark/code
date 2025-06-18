@@ -36,45 +36,117 @@ async function getEmbeddingViaRest(text, apiKey) {
   return responseData.data[0].values;
 }
 
-async function getRelatedPhotos(answerText, answerId, apiKey, limit = 4) {
+async function getRelatedPhotos(answerText, answerId, apiKey) {
   try {
+    console.log(`Getting photos for answer: ${answerText.substring(0, 50)}...`);
+    
     // Get embedding for the answer text
     const answerEmbedding = await getEmbeddingViaRest(answerText, apiKey);
     
-    // Initialize Pinecone for photo index
+    // Initialize Pinecone for your existing index
     const pinecone = new Pinecone({ apiKey });
-    const photoIndex = pinecone.index('adas-photos-index'); // You'll need to create this index
+    const index = pinecone.Index('adas-memory-qa-poc'); // Changed to capital I
     
-    // Query photo captions
-    const photoResults = await photoIndex.query({
+    // First, test if photo-captions namespace exists at all
+    console.log("Testing photo-captions namespace accessibility...");
+    const testQuery = await index.query({
       vector: answerEmbedding,
-      topK: limit * 2, // Get extra for filtering
+      topK: 2,
       includeMetadata: true,
+      namespace: 'photo-captions'
+      // No filter first - just see if anything is there
+    });
+    
+    console.log(`Test query found ${testQuery.matches?.length || 0} total photos in namespace`);
+    if (testQuery.matches?.length > 0) {
+      console.log("Sample metadata keys:", Object.keys(testQuery.matches[0].metadata || {}));
+      console.log("Sample prompt_type value:", testQuery.matches[0].metadata?.prompt_type);
+    }
+    
+    // Search for MOMENT captions in photo-captions namespace
+    console.log("Searching for MOMENT captions...");
+    const momentResults = await index.query({
+      vector: answerEmbedding,
+      topK: 4, // Get extra for filtering
+      includeMetadata: true,
+      namespace: 'photo-captions',
       filter: {
-        // Add any filters you need
+        prompt_type: 'MOMENT'
       }
     });
     
-    // Process and filter results
-    const photos = photoResults.matches
-      ?.filter(match => match.score > 0.55) // Relevance threshold
-      .slice(0, limit)
+    // Search for CONTEXTUAL captions in photo-captions namespace  
+    console.log("Searching for CONTEXTUAL captions...");
+    const contextualResults = await index.query({
+      vector: answerEmbedding,
+      topK: 4, // Get extra for filtering
+      includeMetadata: true,
+      namespace: 'photo-captions',
+      filter: {
+        prompt_type: 'CONTEXTUAL'
+      }
+    });
+    
+    console.log(`Found ${momentResults.matches?.length || 0} MOMENT matches, ${contextualResults.matches?.length || 0} CONTEXTUAL matches`);
+    
+    // Log some details about what we found
+    if (momentResults.matches?.length > 0) {
+      console.log("First MOMENT result metadata:", Object.keys(momentResults.matches[0].metadata || {}));
+    }
+    if (contextualResults.matches?.length > 0) {
+      console.log("First CONTEXTUAL result metadata:", Object.keys(contextualResults.matches[0].metadata || {}));
+    }
+    
+    // Process MOMENT results (take top 2, no threshold)
+    const momentPhotos = momentResults.matches
+      ?.slice(0, 2) // Always take top 2, regardless of score
       .map((match, index) => ({
         photo_id: match.id,
-        thumbnail_url: match.metadata?.thumbnail_url,
-        modal_url: match.metadata?.modal_url || match.metadata?.thumbnail_url,
-        caption: match.metadata?.caption_moment || match.metadata?.caption,
-        caption_full: match.metadata?.caption_full,
+        thumbnail_url: match.metadata?.wordpress_thumbnail,
+        modal_url: match.metadata?.wordpress_url || match.metadata?.wordpress_thumbnail,
+        caption_moment: match.metadata?.caption_text, // The MOMENT caption
+        caption_full: match.metadata?.caption_text, // Could add full description later
         relevance_score: match.score,
-        source_date: match.metadata?.creation_date,
-        position: index
+        source_date: match.metadata?.photo_date,
+        position: index,
+        caption_type: 'MOMENT'
       })) || [];
     
-    return photos;
+    // Process CONTEXTUAL results (take top 2, no threshold)
+    const contextualPhotos = contextualResults.matches
+      ?.slice(0, 2) // Always take top 2, regardless of score
+      .map((match, index) => ({
+        photo_id: match.id,
+        thumbnail_url: match.metadata?.wordpress_thumbnail,
+        modal_url: match.metadata?.wordpress_url || match.metadata?.wordpress_thumbnail,
+        caption_moment: match.metadata?.caption_text, // The CONTEXTUAL caption
+        caption_full: match.metadata?.caption_text,
+        relevance_score: match.score,
+        source_date: match.metadata?.photo_date,
+        position: index + 2, // Continue position numbering
+        caption_type: 'CONTEXTUAL'
+      })) || [];
+    
+    // Combine and sort by relevance score
+    const allPhotos = [...momentPhotos, ...contextualPhotos]
+      .sort((a, b) => b.relevance_score - a.relevance_score)
+      .map((photo, index) => ({
+        ...photo,
+        position: index // Reorder positions based on final sort
+      }));
+    
+    console.log(`Returning ${allPhotos.length} photos (${momentPhotos.length} MOMENT, ${contextualPhotos.length} CONTEXTUAL)`);
+    
+    return allPhotos;
     
   } catch (error) {
     console.error('Photo matching error:', error);
-    return []; // Graceful degradation
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      answerText: answerText?.substring(0, 50)
+    });
+    return []; // Graceful degradation - return empty array if photo search fails
   }
 }
 
@@ -82,8 +154,6 @@ export default async function handler(req, res) {
   console.log("--- Ada's Spark Search Handler ---");
 
   // CORS Headers
-  
-  // Strict CORS - only allow your domain  
   const allowedOrigins = [
     'https://adas-spark.org',
     'https://www.adas-spark.org',
@@ -96,7 +166,6 @@ export default async function handler(req, res) {
   } else {
     res.setHeader('Access-Control-Allow-Origin', 'https://adas-spark.org');
   }
-
 
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -127,19 +196,20 @@ export default async function handler(req, res) {
     const queryVector = await getEmbeddingViaRest(query, apiKey);
     console.log("Embedding generated, dimension:", queryVector.length);
 
-    // Query index using SDK
+    // Query Q&A index using SDK (default namespace)
     const pinecone = new Pinecone({ apiKey });
-    const index = pinecone.index('adas-memory-qa-poc');
+    const index = pinecone.Index('adas-memory-qa-poc');
     
     const searchResponse = await index.query({
       vector: queryVector,
       topK: parseInt(limit, 10),
       includeMetadata: true
+      // No namespace specified = searches default namespace with Q&A pairs
     });
 
-    console.log("Search completed, matches:", searchResponse.matches?.length || 0);
+    console.log("Q&A search completed, matches:", searchResponse.matches?.length || 0);
 
-// Process results - Enhanced with photo matching
+    // Process results - Enhanced with photo matching
     const results = await Promise.all(
       searchResponse.matches?.map(async (match) => {
         const metadata = match.metadata || {};
@@ -152,11 +222,11 @@ export default async function handler(req, res) {
             
             // Add photos to each answer
             for (let i = 0; i < answers.length; i++) {
+              console.log(`Getting photos for answer ${i + 1} of question: ${metadata.question_text}`);
               answers[i].related_photos = await getRelatedPhotos(
                 answers[i].answer_text,
                 answers[i].answer_id,
-                apiKey,
-                4
+                apiKey
               );
             }
           } catch (error) {
