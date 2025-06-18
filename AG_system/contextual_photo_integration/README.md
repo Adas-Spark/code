@@ -2,15 +2,16 @@
 
 The goal of this project is to take a specific album of approximately 1,000 images from your Google Photos account and transform them into a rich, searchable dataset that seamlessly integrates with your Ada's Spark Memory Engine. Currently, these photos exist as static files in Google Photos - valuable visual memories that tell Ada's story but remain disconnected from your semantic search system. Through this process, each image will be downloaded at maximum quality, processed locally with complete lineage tracking, optimized for web delivery, hosted permanently on your WordPress site, and enriched with AI-generated captions that capture the emotional context and narrative significance of each moment. The end result is a contextual photo system that can automatically serve relevant images alongside text-based Q&A responses, transforming your memory engine from a text-only experience into a rich multimedia journey through Ada's story. When users ask questions about Ada's experiences, personality, or journey, they'll not only receive thoughtful written answers but also see photos that emotionally resonate with and visually illustrate those memories.
 
-This process involves five main phases:
+This process involves six main phases:
 
-1. **Data Extraction:** Downloading your photos and their metadata using Google Takeout. Google Takeout allows you to export your Google Photos library, including original image files and accompanying JSON metadata files for each image.
-2. **Image Processing Pipeline:** Processing the downloaded original images from Google Takeout into optimized WebP files with complete lineage tracking throughout the transformation pipeline.
-3. **WordPress Hosting & URL Generation:** Uploading the processed WebP files to your WP Engine WordPress site to get a permanent, high-performance hosting URL for each image.  
-4. **Final Merge and AI Enrichment:** Merging all the data (extracted from Takeout JSONs and WordPress URLs) and then using Google's Vertex AI (Gemini) or another model (TBD) to generate a high-quality, descriptive caption for each image.
-5. **Vector Database Integration Strategy:** The generated captions will be embedded and stored in Pinecone alongside your existing Q&A pairs and Q&A integration experimentation with multiple approaches to determine optimal photo-to-answer matching.
+1. **Data Extraction:** Downloading your photos and their metadata using Google Takeout.
+2. **Image Processing Pipeline:** Processing downloaded images into optimized WebP files with lineage tracking. This includes generating thumbnails and ensuring data integrity with MD5 checks.
+3. **WordPress Hosting & URL Generation:** Uploading processed WebP files to WordPress for permanent hosting URLs.
+4. **AI Enrichment:** Using AI (e.g., Google's Vertex AI Gemini) to generate multiple descriptive captions for each image.
+5. **Upload Captions to Pinecone:** Uploading the AI-generated captions and their vector embeddings to a Pinecone vector database to enable semantic search.
+6. **Vector Database Integration Strategy:** Defining and experimenting with approaches for optimal photo-to-answer matching using the Pinecone database.
 
-The final deliverable will be a single master CSV file containing all this information, ready to be used to populate your Pinecone vector database. This CSV will be built from the information extracted from the Google Takeout JSON files and subsequent processing steps.
+The primary input for the vector database is the `lineage/multi_prompt_enrichment_output.csv` file, which contains the AI-generated captions and associated metadata. This file is then processed by the `scripts/upload_captions_to_pinecone.py` script to populate Pinecone. While a comprehensive `FINAL_MASTER_DATA.csv` may be generated, the enriched multi-prompt output is key for the semantic search functionality.
 
 ### Project Directory Structure
 
@@ -48,6 +49,7 @@ project_root/
 │   ├── verify_processing.py
 │   ├── download_and_append_urls.sh
 │   ├── targeted_check.sh
+│   ├── upload_captions_to_pinecone.py
 │   ├── cleanup_lineage_data.py
 │   ├── safe_merge_thumbnail_data.py
 │   └── fix_lineage_MD5s.py
@@ -55,7 +57,7 @@ project_root/
 ├── credentials.json           # USER-CREATED: Your secret credentials from Google Cloud. (Ignored by Git).
 ├── README.md                  # USER-CREATED: This project documentation file.
 ├── .env                       # USER-CREATED: Environment variables for WP Engine SSH access.
-└── FINAL_MASTER_DATA.csv      # AUTO-GENERATED: The final, enriched output of the entire pipeline.
+└── FINAL_MASTER_DATA.csv      # AUTO-GENERATED: A comprehensive CSV file that may be generated, consolidating all data. The `lineage/multi_prompt_enrichment_output.csv` is the direct input for Pinecone uploads.
 ```
 
 Note: User-managed directories (like `takeout_extracted/`), auto-generated directories (like `original_downloads/`, `processed_webp/`, `lineage/`), and user-created data files (like `credentials.json`, `.env`) as well as the final output (`FINAL_MASTER_DATA.csv`) are typically managed locally and may be included in the project's main `.gitignore` file at the repository root. They are described here for completeness of the workflow.
@@ -250,12 +252,18 @@ python scripts/fix_lineage_MD5s.py
     ```
     **Note:** After merging WordPress URLs, this check will accurately show which images are on WordPress vs. which still need uploading. Most images should now show as "✅ On WordPress" if the pipeline worked correctly.
 
-4.  **Phase 4 - Enrich with AI Captions:** Run the final script to generate AI captions. *(Note: You must first edit the script to set your GCP Project ID and a specific AI prompt).*
+4.  **Phase 4 - Enrich with AI Captions:** Run the final script to generate AI captions.
 
     ```bash
-    python scripts/final_enrichment.py --model YOUR_MODEL_CHOICE [--ada-context] [--image-source thumbnail] [--limit X]
+    python scripts/final_enrichment.py --model YOUR_MODEL_CHOICE --ada-context --image-source thumbnail [--limit X]
     ```
-    *(Note: You must first edit the `final_enrichment.py` script to set your GCP `PROJECT_ID` and ensure the chosen model is appropriate for your needs. The `--model` argument is required.)*
+    *(Note: You must first edit the `final_enrichment.py` script to set your GCP `PROJECT_ID`. The `--model` argument is required. Optional arguments like `--input-file` and `--force-reprocess` can be used for more specific needs.)*
+
+5.  **Phase 5 - Upload Captions to Pinecone:** Upload the generated image captions to your Pinecone vector database.
+    ```bash
+    python scripts/upload_captions_to_pinecone.py --captions EMOTIONAL,CONTEXTUAL --namespace photo-captions
+    ```
+    *(Note: Ensure your `.env` file is configured with `PINECONE_API_KEY`. You can specify which caption types to upload using the `--captions` argument.)*
 ---
 
 **Phase 1: Data Extraction with Google Takeout**
@@ -344,25 +352,24 @@ After the primary image processing is complete, thumbnails are generated using t
     *   `processed_webp_thumbnails/` folder populated with thumbnail images.
     *   Updated `lineage/processing_lineage.json` with thumbnail-specific metadata for each image entry.
 
-#### **Step 2.4.5: Generate Thumbnails**
-This step adds processed_file_md5 hashes to the lineage data to enable accurate status checking and file matching.
+#### **Step 2.4.5: Add Processed File MD5s to Lineage**
+This step uses the `scripts/fix_lineage_MD5s.py` script to enhance the lineage data by adding MD5 hashes of the *processed* files. This is crucial for accurate status checking and file matching in later pipeline stages, as processing (like WebP conversion or resizing) changes the file content and thus its MD5 hash from the original downloaded version.
 
-*   **Purpose:** The processing pipeline transforms files (WebP conversion, compression, resizing) which changes their MD5 hashes. This script calculates the MD5 of each processed file and adds it to the lineage alongside the original download MD5.
+*   **Purpose:** To ensure that lineage files (`complete_image_lineage.csv` and `processing_lineage.json`) contain both the MD5 hash of the original downloaded file (`md5_hash`) and the MD5 hash of the processed WebP file (`processed_file_md5`). This dual tracking allows for a complete audit trail while also enabling accurate matching against the files as they currently exist.
 
 *   **Process:**
-
-1. Calculates MD5 hashes for all files in processed_webp/
-2. Adds processed_file_md5 column to the complete image lineage
-3. Preserves original md5_hash values for complete audit trail
-4. Creates backup before making changes
-
+    1.  The script typically iterates through images listed in the lineage data.
+    2.  For each image, it locates the corresponding processed file in the `processed_webp/` directory.
+    3.  It calculates the MD5 hash of this processed file.
+    4.  It updates the lineage records (e.g., `complete_image_lineage.csv`) by adding this new hash to a `processed_file_md5` column.
+    5.  The script usually includes safety measures like creating backups of lineage files before modification.
 
 *   **Usage:**
-```bash
-python scripts/fix_lineage_MD5s.py
-```
+    ```bash
+    python scripts/fix_lineage_MD5s.py
+    ```
 
-*   **Output:** Enhanced lineage data with dual MD5 tracking for accurate file matching in subsequent pipeline steps.
+*   **Output:** Lineage files (e.g., `lineage/complete_image_lineage.csv`, `lineage/processing_lineage.json`) are updated with a `processed_file_md5` column, providing an enhanced dataset for subsequent pipeline operations. This enables more reliable status checks by `scripts/image_status_check.py`.
 
 #### **Step 2.5: Lineage Benefits**
 
@@ -570,34 +577,36 @@ Before running the full pipeline, conduct a comparative test of caption generati
 
 #### **Step 4.3: The Final Enrichment Script**
 
-The script `scripts/final_enrichment.py` is responsible for generating descriptive and contextual captions for each image using AI models. It takes the consolidated image data, sends requests to a specified AI model, and records the generated captions along with other relevant information.
+The script `scripts/final_enrichment.py` is responsible for generating descriptive and contextual captions for each image using AI models. It takes consolidated image data, sends requests to a specified AI model, and records the generated captions along with other relevant information. The script incorporates stateful processing (skipping images + prompts that have already been successfully processed) and retry logic for robustness.
 
-*   **Input File**: The script primarily uses `lineage/complete_image_lineage.csv`. This file should contain essential columns like `url` (for the full-size image) and `wordpress_url_thumbnail` (if `--image-source thumbnail` is used).
-*   **Output File**: The script generates `lineage/multi_prompt_enrichment_output.csv`. This CSV file contains the original image data along with newly generated information for each prompt used, including:
-    *   The generated caption for each prompt type.
-    *   Token usage for the generation.
-    *   The status of the caption generation (e.g., success, error).
+*   **Input File**: The script defaults to using `lineage/complete_image_lineage.csv`. This can be overridden using the `--input-file FILE_PATH` option. The input file should contain essential columns like `url` (for the full-size image) and `wordpress_url_thumbnail` (if `--image-source thumbnail` is used).
+*   **Output File**: The script generates `lineage/multi_prompt_enrichment_output.csv`. This CSV file contains the original image data along with newly generated information for each image and prompt combination, including:
+    *   The generated caption for each specific prompt type (e.g., `caption_EMOTIONAL`, `caption_STORY`).
+    *   Token usage for each generation (e.g., `tokens_EMOTIONAL_prompt`, `tokens_EMOTIONAL_response`).
+    *   The status of the caption generation (e.g., `status_EMOTIONAL`).
     *   The `image_source_used` (e.g., 'full', 'thumbnail').
+    *   A `record_hash` for traceability of the processed record.
     *   Temporal context information if `--ada-context` is used.
 *   **Command-Line Options**:
-    *   `--model`: (Required) Specifies the AI model to use (e.g., `gemini-1.5-flash-preview-0514`, `gemini-pro-vision`).
-    *   `--input-file`: Path to the input CSV file (defaults to `lineage/complete_image_lineage.csv`).
-    *   `--image-source`: Specifies whether to use `full` resolution images or `thumbnail` images for captioning (defaults to `full`).
-    *   `--ada-context`: If specified, enables the inclusion of Ada's temporal context (important life dates) in the prompts.
-    *   `--limit`: Limits the number of images to process (useful for testing).
-*   **Prompts Used**: The script utilizes a predefined set of prompts to generate diverse captions for each image. These typically include:
-    *   `EMOTIONAL`: Focuses on the emotional content of the image.
-    *   `MOMENT`: Aims for a brief, poetic description of the moment.
-    *   `CONTEXTUAL`: Seeks to understand the broader story or context.
-    *   `STORY`: Generates a narrative based on the image.
-    *   `CHARACTER`: Describes the people and their interactions.
-*   **Temporal Context**: When the `--ada-context` flag is used, the script incorporates awareness of Ada's important life dates (birth, diagnosis, transplant, passing) to provide more relevant and sensitive captions, especially when combined with the image's own timestamp.
-*   **GCP Project ID**: It is crucial to configure your Google Cloud `PROJECT_ID` directly within the `final_enrichment.py` script for it to authenticate and use Vertex AI services.
+    *   `--model MODEL_NAME`: (Required) Specifies the AI model to use. Choices include `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.5-flash-lite-preview-06-17`, `gemini-2.0-flash-001`, `gemini-2.0-flash-lite-001`, and others supported by Vertex AI.
+    *   `--input-file FILE_PATH`: Specifies the path to the input CSV file (defaults to `lineage/complete_image_lineage.csv`).
+    *   `--image-source [full|thumbnail]`: Specifies whether to use `full` resolution images or `thumbnail` images for captioning (defaults to `full`).
+    *   `--ada-context`: If specified, enables the inclusion of Ada's temporal context (important life dates like birth, diagnosis, transplant, passing) in the prompts.
+    *   `--limit N`: Limits the number of images to process (useful for testing).
+    *   `--force-reprocess`: If specified, reprocesses all images even if they have existing entries in the output file.
+*   **Prompts Used**: The script utilizes a predefined dictionary (`PROMPTS_TO_TEST`) to generate diverse captions for each image. The standard set of prompt keys are:
+    *   `EMOTIONAL`
+    *   `MOMENT`
+    *   `CONTEXTUAL`
+    *   `STORY`
+    *   `CHARACTER`
+*   **Temporal Context**: When the `--ada-context` flag is used, the script incorporates awareness of Ada's important life dates (defined in `IMPORTANT_DATES_STR`) to provide more relevant and sensitive captions, especially when combined with the image's own timestamp.
+*   **GCP Project ID**: It is crucial to configure your Google Cloud `PROJECT_ID` as a constant directly within the `final_enrichment.py` script for it to authenticate and use Vertex AI services.
 *   **Usage Example**:
     ```bash
-    python scripts/final_enrichment.py --model gemini-1.5-flash-preview-0514 --ada-context --image-source thumbnail --limit 10
+    python scripts/final_enrichment.py --model gemini-2.5-pro --ada-context --image-source thumbnail --limit 10
     ```
-    This example would process the first 10 images from the input CSV, using their thumbnails, incorporating Ada's temporal context, and utilizing the 'gemini-1.5-flash-preview-0514' model.
+    This example would process the first 10 images from the input CSV, using their thumbnails, incorporating Ada's temporal context, and utilizing the 'gemini-2.5-pro' model.
 
 * If you get authentication issues:
 # Set up authentication
@@ -605,7 +614,55 @@ gcloud auth application-default login
 
 ### ---
 
-### **Phase 5: Vector Database Integration Strategy**
+### **Phase 5: Upload Captions to Pinecone**
+
+This phase takes the AI-generated captions and other metadata from the enrichment process and uploads them as vector embeddings to a Pinecone vector database. This enables powerful semantic search capabilities, allowing users to find relevant photos based on the meaning and context of their queries.
+
+The `scripts/upload_captions_to_pinecone.py` script is responsible for this process.
+
+**Key Functionality:**
+
+*   Reads enriched caption data from the output of `final_enrichment.py` (typically `lineage/multi_prompt_enrichment_output.csv`, configurable via `--input-file`).
+*   Merges this data with `lineage/complete_image_lineage.csv` (configurable via `--lineage-file`) to access essential information like WordPress URLs and original image details.
+*   Allows the user to specify which types of generated captions (e.g., `EMOTIONAL`, `CONTEXTUAL`, `STORY`) should be embedded and uploaded. This is controlled by the mandatory `--captions` argument, which accepts a comma-separated list.
+*   Generates vector embeddings for the selected captions using a text embedding model hosted by Pinecone (currently `text-embedding-004`, though this might vary).
+*   Uploads these embeddings to a specified Pinecone index (default: `adas-memory-qa-poc`) and namespace (default: `photo-captions`).
+*   Includes rich metadata with each vector. This metadata is crucial for filtering, context presentation, and linking back to the original image. It typically includes:
+    *   WordPress URLs for the full-size image and thumbnail.
+    *   The original filename and photo creation date.
+    *   Ada's age at the time the photo was taken.
+    *   The specific caption text that was embedded.
+    *   Details about the AI model and prompts used for caption generation.
+    *   A traceability hash (`record_hash`) from the enrichment output.
+
+**Prerequisites:**
+
+*   A `.env` file must be present in the project root directory and configured with your `PINECONE_API_KEY`.
+
+**Command-Line Options:**
+
+*   `--captions CAPTION_LIST`: (Required) Comma-separated list of caption types to upload (e.g., `EMOTIONAL,CONTEXTUAL,STORY`). These correspond to the prompt keys used during enrichment.
+*   `--input-file FILE_PATH`: Path to the CSV file containing enriched captions. Defaults to `lineage/multi_prompt_enrichment_output.csv`.
+*   `--lineage-file FILE_PATH`: Path to the complete image lineage CSV file. Defaults to `lineage/complete_image_lineage.csv`.
+*   `--index-name INDEX_NAME`: Specifies the Pinecone index to upload to. Defaults to `adas-memory-qa-poc`.
+*   `--namespace NAMESPACE`: Specifies the namespace within the Pinecone index. Defaults to `photo-captions`.
+*   `--dry-run`: If specified, the script will prepare data and show what would be uploaded without actually performing any uploads to Pinecone.
+*   `--batch-size SIZE`: The number of records to process and upload in a single batch. Defaults to 90.
+
+**Usage Example:**
+
+```bash
+python scripts/upload_captions_to_pinecone.py --captions EMOTIONAL,STORY --namespace photo-captions-test
+```
+This command would upload the `EMOTIONAL` and `STORY` captions to the `photo-captions-test` namespace in your Pinecone index.
+
+**Output:**
+
+The script uploads the generated vectors and their associated metadata directly to your Pinecone index. Progress and status messages are printed to the console.
+
+### ---
+
+### **Phase 6: Vector Database Integration Strategy**
 
 The generated captions will be embedded and stored in Pinecone alongside your existing Q&A pairs:
 
@@ -773,9 +830,9 @@ Metadata structure:
 
 **Implementation Strategy:**
 Create partitions of your data with namespaces using Pinecone namespaces to separate:
-- `photo-captions` namespace for image embeddings
-- `qa-answers` namespace for text Q&A pairs
-- This allows independent scaling and management
+- `photo-captions` namespace for image embeddings. The `scripts/upload_captions_to_pinecone.py` script is used to populate the `photo-captions` namespace with the chosen image caption embeddings and their metadata.
+- `qa-answers` namespace for text Q&A pairs.
+- This allows independent scaling and management.
 
 **Next Steps:** Implement small-scale tests of each approach using your existing Q&A pairs and a subset of photos to evaluate user experience impact before choosing primary strategy.
 
