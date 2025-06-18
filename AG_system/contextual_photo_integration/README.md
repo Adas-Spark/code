@@ -479,134 +479,191 @@ Install the necessary Vertex AI library:
 ```bash
 pip install google-cloud-aiplatform
 ```
-#### Step 4.15: Caption Model Evaluation (Pre-Implementation)
+#### Step 4.15: Caption Model and Prompt Evaluation with `final_enrichment.py`
 
-Before running the full pipeline, conduct a comparative test of caption generation models:
+The `final_enrichment.py` script is the primary tool for generating and evaluating AI captions for the images. This script automates the process of testing different models, prompts, and image sources. This section details how the script is structured and how it can be used for evaluation.
 
-**Test Setup:**
-- Select 20-30 representative photos from your dataset
-- Generate captions using both:
-  - Vertex AI (Gemini Pro Vision) 
-  - Claude-3.5-Sonnet or GPT-4V via API
-- Note that perhaps I want two captions per photo (see below)
-- Develop and test multiple prompt approaches to optimize caption quality: (Note that model won't know who is Ada in the picture if there is more than one person in the picture, I'll have to think about how to deal with that in the prompt)
-  - Emotional focus: "Describe Ada's emotional state and the moment's context..."
-  - Activity focus: "What is Ada doing in this image and what does it reveal about her personality..."
-  - Story integration: "How does this moment fit into Ada's larger journey..." (should I provide an overview of the story for the model to have in context?)
-  - Technical description: "Describe the visual elements, setting, and people in this image..."
-  - Zero Shot: "Describe this photo in detail."
-- Should test prompts systematically:
+**Prompting Strategy:**
+
+The script utilizes a predefined set of prompts designed to capture diverse aspects of each image. These prompts are defined in the `PROMPTS_TO_TEST` dictionary within the script:
+
 ```python
-prompts = {
-    "emotional": "Describe the emotional moment and feelings in this image of a young girl's journey",
-    "contextual": "What story does this image tell about childhood resilience?",
-    "descriptive": "Describe what you see, focusing on the people and their interactions",
-    "medical_journey": "Describe this moment in a child's medical journey with sensitivity"
+PROMPTS_TO_TEST = {
+    "EMOTIONAL": "Describe the emotional moment and feelings in this image of a young girl's journey",
+    "MOMENT": "A brief, poetic description of the emotional moment or action (15-20 words). Focus on: what's happening, the feeling, the discovery, the connection. Example: \"The wonder of discovering a butterfly on a sunny afternoon\"",
+    "CONTEXTUAL": "What story does this moment tell about Ada's character, relationships, or journey? Focus on the emotions, interactions, and personality traits visible in this scene.",
+    "STORY": "Describe the story this image tells about Ada's life and spirit. What does this moment reveal about her personality, her relationships, or her approach to challenges?",
+    "CHARACTER": "What character traits, emotions, or relationships are evident in this image? Describe Ada's spirit and personality as shown in this moment."
 }
-
-# Include context on Ada's story?
-context = """This image is from Ada's story - a brave 5-year-old girl 
-who fought leukemia with remarkable spirit. Some photos are from before she was diagnosed. Important dates: she was born 6-8-18, diagnosed 5-5-22, bone marrow transplant from her brother on 9-13-22, and died 7-22-23. It is possible that some photos have the incorrect date. When describing, be sensitive to the medical journey while celebrating moments of joy and connection."""
 ```
 
-caption_prompt = """
-Generate two captions per photo? The "Moment" one could be attached to a photo and that photo could be served somewhat randomly until I get semantic matching of photos working
+These prompts guide the AI model to generate captions focusing on emotional content, the specific moment captured, broader contextual relevance to Ada's story, narrative elements, and character insights.
 
-1. MOMENT: A brief, poetic description of the emotional moment or action (15-20 words)
-   Focus on: what's happening, the feeling, the discovery, the connection
-   Example: "The wonder of discovering a butterfly on a sunny afternoon"
+**Ada's Context (`ADA_CONTEXT`):**
 
-2. DETAILS: Specific visual and contextual information (30-40 words)
-   Include: Who's in the photo (young girl, family members), setting, activities, 
-   medical context if visible, season/time indicators
-   Example: "A young girl in a yellow dress gently observes a monarch butterfly 
-   in a hospital garden. Her careful movements show both curiosity and gentleness."
+To provide essential background information to the AI model, the script uses a global string variable `ADA_CONTEXT`. This context is prepended to the prompts when the `--ada-context` flag is used.
 
-Format your response as:
-MOMENT: [your moment description]
-DETAILS: [your detailed description]
-"""
+The `ADA_CONTEXT` is defined as:
+```python
+ADA_CONTEXT = """This image is from Ada's story - a brave 5-year-old girl
+who fought leukemia with remarkable spirit. Some photos are from before she was diagnosed.
+Important dates: she was born 6-8-18, diagnosed 5-5-22,
+bone marrow transplant from her brother on 9-13-22, and died 7-22-23.
+It is possible that some photos have the incorrect date. When describing, be sensitive
+to the medical journey while celebrating moments of joy and connection."""
+```
+This ensures that the generated captions are informed by Ada's overall story, key life events, and the desired tone of sensitivity and celebration.
 
-- Evaluate based on:
-  - Emotional accuracy (captures Ada's state/context)
-  - Semantic richness (useful for vector search)
-  - Consistency with Ada's story tone
-  - Cost per image
+**Temporal Context Awareness:**
 
-**Decision criteria:** Choose the model that best balances caption quality with cost-effectiveness for your 1,000+ image scale.
+The script incorporates temporal awareness using the `IMPORTANT_DATES_STR` dictionary and the `get_temporal_context` function.
 
------ in progress -----
-Generate captions for this image using each of these prompts:
-prompts = {
-    "emotional": "Describe the emotional moment and feelings in this image of a young girl's journey",
-    "contextual": "What story does this image tell about childhood resilience?",
-    "descriptive": "Describe what you see, focusing on the people and their interactions",
-    "MOMENT": "A brief, poetic description of the emotional moment or action (15-20 words)
-   Focus on: what's happening, the feeling, the discovery, the connection
-   Example: "The wonder of discovering a butterfly on a sunny afternoon"",
-    "DETAILS": "Specific visual and contextual information (30-40 words)
-   Include: Who's in the photo (young girl, family members), setting, activities, 
-   medical context if visible, season/time indicators
-   Example: "A young girl in a yellow dress gently observes a monarch butterfly 
-   in a hospital garden. Her careful movements show both curiosity and gentleness."",
-   "Zero-shot": "Describe this photo in detail"
+`IMPORTANT_DATES_STR`:
+```python
+IMPORTANT_DATES_STR = {
+    "birth": "2018-06-08",
+    "diagnosis": "2022-05-05",
+    "transplant": "2022-09-13",
+    "death": "2023-07-22"
 }
+```
+The `get_temporal_context` function compares the photo's creation date (if available) with these important dates. If a photo is taken on or near (within a `DAYS_WINDOW` of 7 days by default) one of these dates, or near a birthday or anniversary of passing, a relevant temporal context string is generated (e.g., "This photo was taken 3 days before Ada's diagnosis."). This temporal context is then appended to the `CONTEXTUAL`, `STORY`, and `CHARACTER` prompts to add further depth and relevance to the generated captions.
 
-Format your response as:
-emotional: [your description from that prompt],
-contextual: [your description from that prompt],
-etc
------ in progress -----
+**Model and Image Source Testing Strategy:**
 
+The `final_enrichment.py` script is designed to facilitate testing various models and image sources:
 
-#### **Step 4.2: Caption Model Evaluation (Pre-Implementation)**
+*   **Models:** The script supports multiple Gemini models via the `--model` command-line argument. Initial testing can start with high-performance models and then explore more cost-effective or faster options. The available choices (defined in `argparse`) include:
+    *   `gemini-2.5-pro`
+    *   `gemini-2.5-flash`
+    *   `gemini-2.5-flash-lite-preview-06-17`
+    *   `gemini-2.0-flash-001`
+    *   `gemini-2.0-flash-lite-001`
+    (Refer to the script's `parse_arguments` function for the most current list.)
+*   **Image Source:** The `--image-source` flag allows testing with either `full` resolution WebP images or `thumbnail` images. This helps evaluate the trade-off between caption quality (potentially better with full-resolution images) and processing cost/speed (thumbnails are faster and cheaper to process).
+*   **Iterative Evaluation:** The typical strategy involves:
+    1.  Testing a small, representative batch of images with a powerful model (e.g., `gemini-2.5-pro`) and full-resolution images to establish a quality baseline.
+    2.  Comparing results with thumbnail images using the same model to assess if quality remains acceptable.
+    3.  Experimenting with simpler/faster/cheaper models (e.g., `gemini-2.5-flash` or `gemini-2.0-flash-lite`) with the chosen image source to find the best balance of quality, cost, and performance for the entire dataset.
 
-Before running the full pipeline, conduct a comparative test of caption generation models:
+**Output Structure:**
 
-**Test Setup:**
-- Select 20-30 representative photos from your dataset
-- Generate captions using both:
-  - Vertex AI (Gemini Pro Vision) 
-  - Claude-3.5-Sonnet or GPT-4V via API
-- Test multiple prompt approaches to optimize caption quality
-- Consider generating two types of captions per photo:
-  - **MOMENT:** Brief, poetic description (15-20 words)
-  - **DETAILS:** Specific visual and contextual information (30-40 words)
+For each image, the `final_enrichment.py` script sends a single request to the AI model, asking it to generate responses for all five prompts. The model is instructed to return a single JSON object containing these responses. The script then parses this JSON and creates separate rows in the output CSV for each prompt-answer pair.
 
-**Decision criteria:** Choose the model that best balances caption quality with cost-effectiveness for your 1,000+ image scale.
+The expected JSON structure from the model is:
+```json
+{
+    "EMOTIONAL": "[caption for emotional prompt]",
+    "MOMENT": "[caption for moment prompt]",
+    "CONTEXTUAL": "[caption for contextual prompt]",
+    "STORY": "[caption for story prompt]",
+    "CHARACTER": "[caption for character prompt]"
+}
+```
+This structure is detailed in the main prompt constructed within the script that is sent to the Vertex AI API.
+
+**Using `final_enrichment.py` for Evaluation:**
+
+To evaluate different models or settings:
+1.  Prepare your input CSV (default `lineage/complete_image_lineage.csv`, or a smaller subset for testing using `--input-file`).
+2.  Run the `final_enrichment.py` script with the desired parameters:
+    ```bash
+    # Example: Test 'gemini-2.5-flash' with thumbnails and Ada context on 10 images
+    python scripts/final_enrichment.py --model gemini-2.5-flash --image-source thumbnail --ada-context --limit 10
+    ```
+3.  Analyze the output `lineage/multi_prompt_enrichment_output.csv`. Each row in this CSV corresponds to one image and one specific prompt (e.g., one row for `image1.webp` with the `EMOTIONAL` caption, another row for `image1.webp` with the `MOMENT` caption, etc.).
+4.  Review the generated captions for:
+    *   Emotional accuracy and resonance.
+    *   Semantic richness for potential vector search.
+    *   Consistency with Ada's story and the desired tone.
+    *   Relevance given the image, Ada's context, and any temporal context.
+5.  Consider the `total_tokens` and processing time (by observing script execution) to evaluate cost-effectiveness.
+
+By iteratively running the script with different configurations and evaluating the output, you can determine the optimal model, image source, and prompt settings for processing your entire photo collection. The script's stateful processing (it skips images+prompts that have already been successfully processed and exist in the output file, unless `--force-reprocess` is used) helps in efficiently resuming or extending evaluation runs.
 
 #### **Step 4.3: The Final Enrichment Script**
 
-The script `scripts/final_enrichment.py` is responsible for generating descriptive and contextual captions for each image using AI models. It takes consolidated image data, sends requests to a specified AI model, and records the generated captions along with other relevant information. The script incorporates stateful processing (skipping images + prompts that have already been successfully processed) and retry logic for robustness.
+The script `scripts/final_enrichment.py` is responsible for generating descriptive and contextual captions for each image using AI models. It takes consolidated image data, sends requests to a specified AI model, and records the generated captions along with other relevant information.
 
-*   **Input File**: The script defaults to using `lineage/complete_image_lineage.csv`. This can be overridden using the `--input-file FILE_PATH` option. The input file should contain essential columns like `url` (for the full-size image) and `wordpress_url_thumbnail` (if `--image-source thumbnail` is used).
-*   **Output File**: The script generates `lineage/multi_prompt_enrichment_output.csv`. This CSV file contains the original image data along with newly generated information for each image and prompt combination, including:
-    *   The generated caption for each specific prompt type (e.g., `caption_EMOTIONAL`, `caption_STORY`).
-    *   Token usage for each generation (e.g., `tokens_EMOTIONAL_prompt`, `tokens_EMOTIONAL_response`).
-    *   The status of the caption generation (e.g., `status_EMOTIONAL`).
-    *   The `image_source_used` (e.g., 'full', 'thumbnail').
-    *   A `record_hash` for traceability of the processed record.
-    *   Temporal context information if `--ada-context` is used.
-*   **Command-Line Options**:
-    *   `--model MODEL_NAME`: (Required) Specifies the AI model to use. Choices include `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.5-flash-lite-preview-06-17`, `gemini-2.0-flash-001`, `gemini-2.0-flash-lite-001`, and others supported by Vertex AI.
-    *   `--input-file FILE_PATH`: Specifies the path to the input CSV file (defaults to `lineage/complete_image_lineage.csv`).
-    *   `--image-source [full|thumbnail]`: Specifies whether to use `full` resolution images or `thumbnail` images for captioning (defaults to `full`).
-    *   `--ada-context`: If specified, enables the inclusion of Ada's temporal context (important life dates like birth, diagnosis, transplant, passing) in the prompts.
-    *   `--limit N`: Limits the number of images to process (useful for testing).
-    *   `--force-reprocess`: If specified, reprocesses all images even if they have existing entries in the output file.
-*   **Prompts Used**: The script utilizes a predefined dictionary (`PROMPTS_TO_TEST`) to generate diverse captions for each image. The standard set of prompt keys are:
-    *   `EMOTIONAL`
-    *   `MOMENT`
-    *   `CONTEXTUAL`
-    *   `STORY`
-    *   `CHARACTER`
-*   **Temporal Context**: When the `--ada-context` flag is used, the script incorporates awareness of Ada's important life dates (defined in `IMPORTANT_DATES_STR`) to provide more relevant and sensitive captions, especially when combined with the image's own timestamp.
-*   **GCP Project ID**: It is crucial to configure your Google Cloud `PROJECT_ID` as a constant directly within the `final_enrichment.py` script for it to authenticate and use Vertex AI services.
-*   **Usage Example**:
-    ```bash
-    python scripts/final_enrichment.py --model gemini-2.5-pro --ada-context --image-source thumbnail --limit 10
+**Key Features:**
+
+*   **Versatile Captioning**: Generates multiple captions per image based on a set of predefined prompts.
+*   **Contextual Awareness**: Can incorporate Ada's overall story (`ADA_CONTEXT`) and specific temporal context related to important dates.
+*   **Model Flexibility**: Allows selection from various Gemini models.
+*   **Image Source Options**: Can process full-resolution images or thumbnails.
+*   **Robustness**: Implements retry logic for transient API errors and stateful processing to resume or skip already completed work.
+*   **Detailed Output**: Produces a CSV file with comprehensive information for each generated caption, including tokens used, status, and traceability hashes.
+
+**Configuration:**
+
+*   **GCP Project ID**: Crucially, you **must configure your Google Cloud `PROJECT_ID` as a constant directly within the `final_enrichment.py` script**. This is required for the script to authenticate with and utilize Vertex AI services.
+    ```python
+    # --- Configuration ---
+    PROJECT_ID = "your-gcp-project-id-here"  # Update this line in the script
+    LOCATION = "us-central1"
     ```
-    This example would process the first 10 images from the input CSV, using their thumbnails, incorporating Ada's temporal context, and utilizing the 'gemini-2.5-pro' model.
+
+**Command-Line Options:**
+
+The script's behavior can be customized using the following command-line arguments:
+
+*   `--model MODEL_NAME`: (Required) Specifies the AI model to use.
+    *   Choices: `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.5-flash-lite-preview-06-17`, `gemini-2.0-flash-001`, `gemini-2.0-flash-lite-001`.
+*   `--input-file FILE_PATH`: Specifies the path to the input CSV file (defaults to `lineage/complete_image_lineage.csv`). This file should contain image metadata, including URLs.
+*   `--image-source [full|thumbnail]`: Specifies whether to use `full` resolution WebP images (from the `url` column in the input CSV) or `thumbnail` images (from the `wordpress_url_thumbnail` column) for captioning. Defaults to `full`. Using thumbnails can speed up processing and reduce costs.
+*   `--ada-context`: If specified, enables the inclusion of Ada's temporal context (defined in `ADA_CONTEXT` and `IMPORTANT_DATES_STR` within the script) in the prompts for `CONTEXTUAL`, `STORY`, and `CHARACTER`.
+*   `--limit N`: Optionally limits the number of images to process from the input file (useful for testing).
+*   `--force-reprocess`: If specified, reprocesses all images and their prompt combinations, even if they have existing successfully processed entries in the output file.
+
+**Prompts Used:**
+
+The script utilizes a predefined dictionary (`PROMPTS_TO_TEST`) to generate diverse captions for each image. For each image, it generates a caption for each of the following prompt keys:
+
+*   `EMOTIONAL`
+*   `MOMENT`
+*   `CONTEXTUAL`
+*   `STORY`
+*   `CHARACTER`
+
+(Refer to the `PROMPTS_TO_TEST` dictionary in the script for the full text of each prompt.)
+
+**Robustness and Efficiency:**
+
+*   **Retry Logic**: The script incorporates a retry mechanism (via the `process_image_with_retry` function) to handle transient API errors (e.g., timeouts). It will attempt to reprocess an image up to `MAX_RETRIES` times with exponential backoff.
+*   **Stateful Processing**: To avoid redundant work and allow for interruption and resumption, the script loads existing results from `lineage/multi_prompt_enrichment_output.csv` upon starting. It calculates a `param_hash` (using `calculate_processing_hash`) for each unique combination of image, model, prompt, and other processing parameters. If a hash corresponding to a successful prior attempt is found, that specific image-prompt combination is skipped, unless the `--force-reprocess` flag is used.
+
+**Traceability Hashes:**
+
+The script includes hashing mechanisms for traceability and state management:
+
+*   `param_hash`: This hash is calculated by `calculate_processing_hash` based on the original filename, model used, image URL, prompt name, whether Ada context was included, and the image source. It is stored in the output CSV for successfully processed records and is used internally by the script to identify unique processing parameter combinations for stateful processing (i.e., skipping already processed items).
+*   `generate_record_hash`: This function is defined in the script to create a unique hash from original filename, model, prompt name, and a processing timestamp. The script uses this to generate an `error_hash` for records that encounter errors. While the subtask mentioned `record_hash` for each output row, currently, successfully processed rows get a `param_hash` and error rows get an `error_hash`.
+
+**Output File (`lineage/multi_prompt_enrichment_output.csv`):**
+
+The script generates `lineage/multi_prompt_enrichment_output.csv`. Unlike a wide format with one row per image and multiple caption columns, this file has a long format: **each row represents a single caption generated for a specific image using a specific prompt.**
+
+Key columns in this output file include:
+*   `processing_order`: The order in which the image was processed from the input file.
+*   `image_url`: The URL of the image that was actually used for analysis (full or thumbnail).
+*   `original_filename`: The original filename of the image.
+*   `model_used`: The AI model that generated the caption.
+*   `total_tokens`, `prompt_tokens`, `candidates_tokens`: Token usage information for the generation request.
+*   `prompt_name`: The key from `PROMPTS_TO_TEST` that was used (e.g., `EMOTIONAL`, `STORY`).
+*   `prompt_answer`: The AI-generated caption for that specific prompt.
+*   `photo_taken_time`: The creation date of the photo, if available.
+*   `temporal_context`: Any temporal context string that was added to the prompt.
+*   `ada_context_included`: Boolean indicating if `ADA_CONTEXT` was used.
+*   `image_source_used`: Indicates whether `full` or `thumbnail` image source was used for generating the caption.
+*   `status`: Indicates if the processing for this specific image-prompt was a `success` or `error`.
+*   `param_hash` (for successful records) or `error_hash` (for error records): The hash for traceability/state management.
+
+**Usage Example:**
+
+```bash
+python scripts/final_enrichment.py --model gemini-2.5-flash --ada-context --image-source thumbnail --limit 10
+```
+This example would process the first 10 images from the default input CSV, using their thumbnails, incorporating Ada's temporal context, and utilizing the 'gemini-2.5-flash' model. The output CSV would contain up to 50 new rows (10 images x 5 prompts each), plus any pre-existing data if not using `--force-reprocess`.
 
 * If you get authentication issues:
 # Set up authentication
