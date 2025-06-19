@@ -1,5 +1,6 @@
 // ===== CONFIGURATION =====
 //FOR PRODUCTION
+///*
 const API_CONFIG = {
     baseUrl: 'https://memories.adas-spark.org/api',
     endpoints: {
@@ -7,6 +8,7 @@ const API_CONFIG = {
     },
     timeout: 30000
 };
+//*/
 
 //FOR LOCAL TESTING
 /*
@@ -238,12 +240,14 @@ createApp({
             try {
                 console.log('Loading dynamic example questions...');
                 // For Production
+                ///*
                 const response = await fetch(`${API_CONFIG.baseUrl}/questions`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json'
                     }
                 });
+                //*/
 
                 // For Local Testing
                 /*
