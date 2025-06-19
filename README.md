@@ -17,8 +17,14 @@ This project is composed of several key systems:
 * **Backend System & Data Pipeline:** Handles search queries, generates vector embeddings (currently using Pinecone's `llama-text-embed-v2` model), and queries the Pinecone vector index (`adas-memory-qa-poc`). The data pipeline involves scraping, processing, Q&A generation, quality control, and vector uploading.
     * Scraping: `AG_system/scraping/scrape.py`
     * Data Processing: `AG_system/scraping/update_authors_and_text.py`
+* **Contextual Photo Integration System:** A system to enrich Ada's Living Story by linking textual Q&A with contextually relevant images from Ada's life. This system aims to provide a richer, multimedia experience.
+    *   For detailed information on its design, workflow, and current status, please refer to the [Contextual Photo Integration README](./AG_system/contextual_photo_integration/README.md).
+    *   This component is currently under development. See [Project Status Document](./PROJECT_STATUS.md) for the latest updates.
     * Q&A Generation & Merging: Manual Q&A generation followed by `AG_system/proof_of_concepts/QC_and_merge_jsons.ipynb` for merging and JSON validation.
     * Embedding QC & Vector DB Operations (Pinecone): `AG_system/proof_of_concepts/pincecone/visualization_analysis.ipynb` for embedding quality control, and `AG_system/proof_of_concepts/pincecone/pinecone_poc.ipynb` for uploading embeddings to Pinecone.
+    * **Suggestion for Future Enhancement:** To potentially optimize performance and reduce token usage, consider experimenting with sending thumbnails (instead of full-resolution images, where appropriate) to the image-to-text models used in the `AG_system/contextual_photo_integration/scripts/final_enrichment.py` script. This could be particularly relevant for generating brief descriptions or captions.
+
+**Important Note on Deployment:** Before uploading or making significant changes to the images or related data on your WP-engine instance (especially after processing data from this system), it is strongly recommended to perform a full backup of your WP-engine environment. It's also a good practice to take another backup after the changes have been successfully implemented.
 
 ## Associated Utilities
 
@@ -37,7 +43,8 @@ This repository also contains a custom mail merge tool used for tasks such as em
 5.  `AG_system/proof_of_concepts/pincecone/visualization_analysis.ipynb` → Quality control of embeddings.
 6.  `AG_system/proof_of_concepts/pincecone/pinecone_poc.ipynb` → Upload embeddings to Pinecone vector database.
 7.  `AG_system/static_website/` → Vue.js frontend (deployed to WP Engine and embedded via iframe) calls API endpoints (Node.js serverless functions deployed on Vercel) for user queries.
+8.  `AG_system/contextual_photo_integration/` scripts → Process Google Photos Takeout data, generate AI captions, and prepare `FINAL_MASTER_DATA.csv` for enriching the Pinecone vector database with image-related context.
 
 **Key Technologies (Ada's Living Story):**
 * **Frontend:** Vue.js 3, modern CSS.
-* **Static Site Hosting:** WP Engine (with iframe embedding). [cite: adas-spark/code/code-9b892
+* **Static Site Hosting:** WP Engine (with iframe embedding).

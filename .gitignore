@@ -1,3 +1,16 @@
+# Project-specific credential files
+AG_system/contextual_photo_integration/credentials.json
+AG_system/contextual_photo_integration/.env
+
+# System files (recursive)
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
 # VS Code files
 *.code-workspace
 .vscode/*
@@ -13,21 +26,27 @@
 .env
 *.db
 
-# System files (recursive)
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
 
+=======
 # Virtual documents and temp files
 .virtual_documents/
 */.virtual_documents/
 
 # Common credential and token files
 *.json
+=======
+# Contextual Photo Integration - Binary Files
+AG_system/contextual_photo_integration/original_downloads/
+AG_system/contextual_photo_integration/processed_webp/
+AG_system/contextual_photo_integration/processed_webp_thumbnails/
+
+# But keep lineage and metadata
+!AG_system/contextual_photo_integration/lineage/
+!AG_system/contextual_photo_integration/*.csv
+!AG_system/contextual_photo_integration/*.json
+
+# Common credential and token files (general)
+>>>>>>> contextual-photo-integration
 *.pickle
 token.*
 credentials.*
@@ -39,3 +58,9 @@ credentials.*
 *.tmp
 *.temp
 *~
+=======
+
+# Additional project-specific excludes
+AG_system/contextual_photo_integration/takout_zips/
+AG_system/proof_of_concepts/generated_qa_pairs_combined_clean_20250603_214922.json
+generated_qa_pairs_initial_tests_not_in_production/

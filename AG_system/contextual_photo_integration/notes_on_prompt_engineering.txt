@@ -1,0 +1,339 @@
+I uploaded /Users/joelswenson/Documents/Adas_spark/code_repo/github_repo__called_code/code/AG_system/contextual_photo_integration/original_downloads/2021-01-10/20210110_100157\~3.jpg 
+to https://console.cloud.google.com/vertex-ai/studio/multimodal, using gemini-2.5-pro-preview-06-05, with the following prompt. It utilized tokens as follows:
+Images
+1,806
+Text
+1,144
+Total tokens
+2,950
+
+----- Prompt ----
+Generate captions for this image using each of these prompts:
+prompts = {
+"emotional": "Describe the emotional moment and feelings in this image of a young girl's journey",
+"contextual": "What story does this image tell about childhood resilience?",
+"descriptive": "Describe what you see, focusing on the people and their interactions",
+"MOMENT": "A brief, poetic description of the emotional moment or action (15-20 words)
+Focus on: what's happening, the feeling, the discovery, the connection
+Example: "The wonder of discovering a butterfly on a sunny afternoon"",
+"DETAILS": "Specific visual and contextual information (30-40 words)
+Include: Who's in the photo (young girl, family members), setting, activities,
+medical context if visible, season/time indicators
+Example: "A young girl in a yellow dress gently observes a monarch butterfly
+in a hospital garden. Her careful movements show both curiosity and gentleness."",
+"Zero-shot": "Describe this photo in detail"
+}
+
+Format your response as:
+emotional: [your description from that prompt],
+contextual: [your description from that prompt],
+etc
+
+---- Response -----
+emotional: This image captures a moment of pure, unfiltered childhood joy and mischief. The little girl's scrunched-up, grinning face radiates a feisty, playful spirit, finding delight and adventure in a simple winter's day. Her direct gaze connects with the viewer, sharing a secret, happy world where a found stick is a treasure and the cold is just another reason to be cozy and vibrant.
+
+contextual: This image tells a story of everyday childhood resilience. Bundled against the cold in a snowy landscape, this young girl isn't just enduring the weather; she's thriving in it. Armed with a simple stick and a powerful, mischievous expression, she demonstrates a child's innate ability to find adventure and joy in any circumstance, transforming a cold, stark environment into her personal playground.
+
+descriptive: A young, blonde-haired girl is pictured outdoors in the winter. She is bundled in warm clothing, including a purple puffer jacket, pink pants, and a white and grey knitted hat with an animal face on it. She looks directly at the camera with a playful, scrunched-nose smile. In her gloved hands, she holds a small stick, interacting with the person taking the photo from her spot by a wooden railing in a snowy, wooded area.
+
+MOMENT: A winter explorer's defiant, joyful glance, a simple stick her treasure, the cold air her wonderful playground.
+
+DETAILS: A young girl in a purple coat, pink snow pants, and an animal-themed winter hat stands in a snowy park. She is holding a stick and giving a mischievous, scrunched-nose smile to the camera during a cold-weather outing.
+
+Zero-shot: This is a portrait of a young girl outdoors on a cold, overcast day. She has blonde, wavy hair peeking out from under a white and grey knitted hat that features a cute animal face. She is wearing a thick purple puffer jacket, pink snow pants, and turquoise mittens. The girl is looking directly at the camera with a wonderfully mischievous and happy expression, scrunching up her nose and grinning. In her right hand, she holds a small stick. The background is a snowy landscape with a wooden railing and a dense thicket of bare trees and reddish-brown shrubs.
+
+---------- Next Trial ----------
+
+using gemini-2.0-flash-001, with the following prompt. It utilized tokens as follows:
+Images
+1,806
+Text
+588
+Total tokens
+2,394
+
+----- Prompt ----
+Generate captions for this image using each of these prompts:
+prompts = {
+"emotional": "Describe the emotional moment and feelings in this image of a young girl's journey",
+"contextual": "What story does this image tell about childhood resilience?",
+"descriptive": "Describe what you see, focusing on the people and their interactions",
+"MOMENT": "A brief, poetic description of the emotional moment or action (15-20 words)
+Focus on: what's happening, the feeling, the discovery, the connection
+Example: "The wonder of discovering a butterfly on a sunny afternoon"",
+"DETAILS": "Specific visual and contextual information (30-40 words)
+Include: Who's in the photo (young girl, family members), setting, activities,
+medical context if visible, season/time indicators
+Example: "A young girl in a yellow dress gently observes a monarch butterfly
+in a hospital garden. Her careful movements show both curiosity and gentleness."",
+"Zero-shot": "Describe this photo in detail"
+}
+
+Format your response as:
+emotional: [your description from that prompt],
+contextual: [your description from that prompt],
+etc
+
+---- Response -----
+emotional: This image captures a moment of pure, unfiltered childhood joy and mischief. The little girl's scrunched-up, grinning face radiates a feisty, playful spirit, finding delight and adventure in a simple winter's day. Her direct gaze connects with the viewer, sharing a secret, happy world where a found stick is a treasure and the cold is just another reason to be cozy and vibrant.
+
+contextual: This image tells a story of everyday childhood resilience. Bundled against the cold in a snowy landscape, this young girl isn't just enduring the weather; she's thriving in it. Armed with a simple stick and a powerful, mischievous expression, she demonstrates a child's innate ability to find adventure and joy in any circumstance, transforming a cold, stark environment into her personal playground.
+
+descriptive: A young, blonde-haired girl is pictured outdoors in the winter. She is bundled in warm clothing, including a purple puffer jacket, pink pants, and a white and grey knitted hat with an animal face on it. She looks directly at the camera with a playful, scrunched-nose smile. In her gloved hands, she holds a small stick, interacting with the person taking the photo from her spot by a wooden railing in a snowy, wooded area.
+
+MOMENT: A winter explorer's defiant, joyful glance, a simple stick her treasure, the cold air her wonderful playground.
+
+DETAILS: A young girl in a purple coat, pink snow pants, and an animal-themed winter hat stands in a snowy park. She is holding a stick and giving a mischievous, scrunched-nose smile to the camera during a cold-weather outing.
+
+Zero-shot: This is a portrait of a young girl outdoors on a cold, overcast day. She has blonde, wavy hair peeking out from under a white and grey knitted hat that features a cute animal face. She is wearing a thick purple puffer jacket, pink snow pants, and turquoise mittens. The girl is looking directly at the camera with a wonderfully mischievous and happy expression, scrunching up her nose and grinning. In her right hand, she holds a small stick. The background is a snowy landscape with a wooden railing and a dense thicket of bare trees and reddish-brown shrubs.
+
+
+------- Comparing jpg vs webp -------
+I uploaded /Users/joelswenson/Documents/Adas_spark/code_repo/github_repo__called_code/code/AG_system/contextual_photo_integration/processed_webp/20210110_100157\~3-adasstory.webp
+to https://console.cloud.google.com/vertex-ai/studio/multimodal, using gemini-2.5-pro-preview-06-05, with the following prompt. It utilized tokens as follows:
+Images
+1,806
+Text
+1,156
+Total tokens
+2,962
+
+----- Prompt ----
+Generate captions for this image using each of these prompts:
+prompts = {
+"emotional": "Describe the emotional moment and feelings in this image of a young girl's journey",
+"contextual": "What story does this image tell about childhood resilience?",
+"descriptive": "Describe what you see, focusing on the people and their interactions",
+"MOMENT": "A brief, poetic description of the emotional moment or action (15-20 words)
+Focus on: what's happening, the feeling, the discovery, the connection
+Example: "The wonder of discovering a butterfly on a sunny afternoon"",
+"DETAILS": "Specific visual and contextual information (30-40 words)
+Include: Who's in the photo (young girl, family members), setting, activities,
+medical context if visible, season/time indicators
+Example: "A young girl in a yellow dress gently observes a monarch butterfly
+in a hospital garden. Her careful movements show both curiosity and gentleness."",
+"Zero-shot": "Describe this photo in detail"
+}
+
+Format your response as:
+emotional: [your description from that prompt],
+contextual: [your description from that prompt],
+etc
+
+---- Response -----
+emotional: A delightful moment of childhood mischief lights up a cold winter day. Her scrunched-up nose and playful grin capture a pure, unfiltered expression of personality, a spark of warm, cheeky joy found while exploring a snowy world.
+contextual: This image tells a story of everyday childhood resilience. Bundled against the winter chill, this young girl is not merely enduring the cold; she is thriving in it. With a stick as her tool and a mischievous grin, she transforms a simple, snowy outing into an adventure, finding joy in the stark winter landscape.
+descriptive: A young, blonde-haired girl dressed for winter in a purple puffer jacket, pink snow pants, and an adorable animal-face hat, looks directly at the camera with a mischievous, scrunched-nose smile. She stands in a snowy, wooded area next to a wooden railing, holding a small stick in her gloved hands, capturing a candid moment of playful interaction.
+MOMENT: A flash of cheeky personality on a cold winter's day, her mischievous grin a warm discovery in the snow.
+DETAILS: A young girl with blonde hair stands in a winter landscape with snow and bare trees. Dressed in a purple jacket, pink snow pants, and an animal hat, she holds a stick and gives a mischievous look to the camera.
+Zero-shot: This is a candid outdoor portrait of a young girl in winter. She has blonde hair and is making a playful, scrunched-up, mischievous face directly at the camera. She is warmly dressed in a purple puffer jacket, bright pink snow pants, and turquoise mittens. On her head, she wears a charming white and grey knit hat with an embroidered animal face and ears. She is standing in a snowy environment next to a wooden railing, holding a small stick. The background consists of leafless trees and shrubs under an overcast sky, creating a classic winter scene.
+---- Next Trial ----
+I uploaded /Users/joelswenson/Documents/Adas_spark/code_repo/github_repo__called_code/code/AG_system/contextual_photo_integration/processed_webp/20210110_100157\~3-adasstory.webp
+to https://console.cloud.google.com/vertex-ai/studio/multimodal, using gemini-2.0-flash-001, with the following prompt. It utilized tokens as follows:
+Images
+1,806
+Text
+557
+Total tokens
+2,363
+
+----- Prompt ----
+Generate captions for this image using each of these prompts:
+prompts = {
+"emotional": "Describe the emotional moment and feelings in this image of a young girl's journey",
+"contextual": "What story does this image tell about childhood resilience?",
+"descriptive": "Describe what you see, focusing on the people and their interactions",
+"MOMENT": "A brief, poetic description of the emotional moment or action (15-20 words)
+Focus on: what's happening, the feeling, the discovery, the connection
+Example: "The wonder of discovering a butterfly on a sunny afternoon"",
+"DETAILS": "Specific visual and contextual information (30-40 words)
+Include: Who's in the photo (young girl, family members), setting, activities,
+medical context if visible, season/time indicators
+Example: "A young girl in a yellow dress gently observes a monarch butterfly
+in a hospital garden. Her careful movements show both curiosity and gentleness."",
+"Zero-shot": "Describe this photo in detail"
+}
+
+Format your response as:
+emotional: [your description from that prompt],
+contextual: [your description from that prompt],
+etc
+---- Response -----
+emotional: This image captures a moment of playful determination and mischief in a young girl's exploration of the outdoors, her face etched with a mix of curiosity and feisty spirit despite an uncertain world.
+
+contextual: The image tells a story of childhood resilience, showing a young girl venturing into a snowy environment, bundled in warm clothes, and finding joy and engagement despite the cold, demonstrating an adaptability and willingness to embrace the world.
+
+descriptive: A young girl with blonde hair and a whimsical bear hat smiles mischievously, her bright blue jacket and pink pants popping against the snowy background. She holds a stick and leans against a wooden railing, her eyes full of curiosity and playful intent.
+
+MOMENT: "With eyes full of mischief, a little explorer finds her world tinged with magic, a quiet rebellion against the cold, carved in her smile."
+
+DETAILS: "A young girl in a bear-eared hat and brightly colored winter clothes stands outside by a snowy railing. She clutches a stick, her expression a mix of curiosity and playful defiance against the cold. A grey sky hovers over the trees."
+
+Zero-shot: The image features a young girl in winter clothing, including a bear-themed hat and a blue jacket, standing near a wooden handrail in a slightly snowy outdoor setting. Her blonde hair peeks out from under the hat, and she looks at the camera with a mischievous expression. She holds a stick, and the backdrop shows bare trees and a neutral sky.
+
+
+---- Next Trial ----
+I uploaded AG_system/contextual_photo_integration/processed_webp/IMG_6659-adasstory.webp
+to https://console.cloud.google.com/vertex-ai/studio/multimodal, using gemini-2.5-pro-preview-06-05, with the following prompt. It utilized tokens as follows:
+Images
+1,806
+Text
+1,156
+Total tokens
+2,962
+
+----- Prompt ----
+Generate captions for this image using each of these prompts:
+prompts = {
+"emotional": "Describe the emotional moment and feelings in this image of a young girl's journey",
+"contextual": "What story does this image tell about childhood resilience?",
+"descriptive": "Describe what you see, focusing on the people and their interactions",
+"MOMENT": "A brief, poetic description of the emotional moment or action (15-20 words)
+Focus on: what's happening, the feeling, the discovery, the connection
+Example: "The wonder of discovering a butterfly on a sunny afternoon"",
+"DETAILS": "Specific visual and contextual information (30-40 words)
+Include: Who's in the photo (young girl, family members), setting, activities,
+medical context if visible, season/time indicators
+Example: "A young girl in a yellow dress gently observes a monarch butterfly
+in a hospital garden. Her careful movements show both curiosity and gentleness."",
+"Zero-shot": "Describe this photo in detail"
+}
+
+Format your response as:
+emotional: [your description from that prompt],
+contextual: [your description from that prompt],
+etc
+
+---- Response -----
+emotional: This image captures a beautiful spectrum of childhood joy and connection. There's the pure, uninhibited happiness radiating from the older girl's beaming smile, the silly, imaginative playfulness of her brother, and the wide-eyed, innocent curiosity of the baby sister taking it all in. It’s a moment overflowing with love and the simple, profound happiness of being together.
+
+contextual: This image tells a story of the resilient joy found in simple moments and sibling bonds. Each child, at a different stage of development, finds their own way to be present and happy—through play, observation, and joyful expression. Lying together on a single blanket, they create their own world of fun, showcasing the foundational support and carefree spirit that helps children navigate the world.
+
+descriptive: Three young children are lying on their stomachs on a dark blue blanket in a vibrant green, grassy yard. On the left, a young boy with blond hair in a blue shirt playfully makes "binoculars" with his hands over his eyes. In the center, a baby girl in a pink top and a white floral headband looks at the camera with big, curious blue eyes. On the right, an older girl with long blond hair and a floral dress smiles broadly and joyfully at the camera.
+
+MOMENT: A moment of shared childhood: playful gazes, curious eyes, and a bright, infectious smile on the lawn.
+
+DETAILS: Three siblings—a young boy, a baby girl, and an older girl—enjoy a warm day outside on a green lawn. They are lying together on a blue blanket, with the boy playing, the baby observing, and the girl smiling happily.
+
+Zero-shot: Three children are pictured lying on their stomachs on a dark blue blanket spread out on a lush green lawn. On the left, a young boy with short blond hair is wearing a light blue collared shirt. He is making circles with his fingers and thumbs around his eyes in a playful gesture, smiling as he does so, with his feet kicked up in the air showing the white soles of his shoes. In the middle is a baby girl wearing a pink ruffled top and a white headband with a flower. She has light hair, chubby cheeks, and large blue eyes, and she is looking directly at the camera. On the right, an older girl with long, wavy blond hair and a pink clip is smiling widely, showing her teeth. She wears a dark dress with a floral pattern. The photo captures a happy, candid moment between siblings outdoors.
+---- Next Trial ----
+I uploaded AG_system/contextual_photo_integration/processed_webp/IMG_6659-adasstory.webp
+to https://console.cloud.google.com/vertex-ai/studio/multimodal, using gemini-2.0-flash-001, with the following prompt. It utilized tokens as follows:
+Images
+1,806
+Text
+557
+Total tokens
+2,363
+
+----- Prompt ----
+Generate captions for this image using each of these prompts:
+prompts = {
+"emotional": "Describe the emotional moment and feelings in this image of a young girl's journey",
+"contextual": "What story does this image tell about childhood resilience?",
+"descriptive": "Describe what you see, focusing on the people and their interactions",
+"MOMENT": "A brief, poetic description of the emotional moment or action (15-20 words)
+Focus on: what's happening, the feeling, the discovery, the connection
+Example: "The wonder of discovering a butterfly on a sunny afternoon"",
+"DETAILS": "Specific visual and contextual information (30-40 words)
+Include: Who's in the photo (young girl, family members), setting, activities,
+medical context if visible, season/time indicators
+Example: "A young girl in a yellow dress gently observes a monarch butterfly
+in a hospital garden. Her careful movements show both curiosity and gentleness."",
+"Zero-shot": "Describe this photo in detail"
+}
+
+Format your response as:
+emotional: [your description from that prompt],
+contextual: [your description from that prompt],
+etc
+---- Response -----
+emotional: This image captures the innocent joy and playfulness of childhood. The children's expressions reflect happiness, curiosity, and a strong bond of siblinghood, creating a heartwarming emotional moment.
+
+contextual: This image tells a story of childhood resilience through the pure joy displayed by the children. Their carefree attitudes and playful interactions on the grass highlight their ability to find happiness and connection in simple, everyday moments.
+
+descriptive: The photo features three young children lying on a blue blanket in the grass. On the left, a young boy lies on his back with his feet up in the air; he is playfully making circles around his eyes with his fingers. In the middle, a baby girl wearing a pink dress looks directly at the camera. To the right, a young girl with blonde hair smiles broadly, showcasing her missing front teeth. The setting is a lush green lawn, suggesting a relaxed and joyful atmosphere.
+
+MOMENT: Laughter echoes across the lawn, a trio of siblings in the meadow. The image captures their carefree innocence as they immerse themselves in a joyful world.
+
+DETAILS: Three siblings – a young boy, baby girl and young lady – lie on a blue blanket spread out on green grass. The boy playfully makes glasses with his hands, while the baby gazes with wide eyes. The blonde girl smiles broadly amid nature's vibrant shades.
+
+Zero-shot: This photo shows three young siblings laying in grass on a blue blanket. The young boy is in a light blue shirt and making glasses with his hands. The baby in the middle is wearing a pink dress with a bow in her hair. The blonde girl is smiling to the right.
+
+---- Next Trial - test if thumbnail is big enough for caption ----
+I uploaded AG_system/contextual_photo_integration/processed_webp_thumbnails//IMG_6659-adasstory-h360-thumb.webp
+to https://console.cloud.google.com/vertex-ai/studio/multimodal, using gemini-2.5-pro-preview-06-05, with the following prompt. It utilized tokens as follows:
+Text
+1,195
+Images
+1,806
+Total tokens
+3,001
+
+----- Prompt ----
+Generate captions for this image using each of these prompts:
+prompts = {
+"emotional": "Describe the emotional moment and feelings in this image of a young girl's journey",
+"contextual": "What story does this image tell about childhood resilience?",
+"descriptive": "Describe what you see, focusing on the people and their interactions",
+"MOMENT": "A brief, poetic description of the emotional moment or action (15-20 words)
+Focus on: what's happening, the feeling, the discovery, the connection
+Example: "The wonder of discovering a butterfly on a sunny afternoon"",
+"DETAILS": "Specific visual and contextual information (30-40 words)
+Include: Who's in the photo (young girl, family members), setting, activities,
+medical context if visible, season/time indicators
+Example: "A young girl in a yellow dress gently observes a monarch butterfly
+in a hospital garden. Her careful movements show both curiosity and gentleness."",
+"Zero-shot": "Describe this photo in detail"
+}
+
+Format your response as:
+emotional: [your description from that prompt],
+contextual: [your description from that prompt],
+etc
+
+---- Response -----
+emotional: This image captures the pure, unadulterated joy of siblinghood. It's a moment overflowing with warmth and affection, where silly antics from an older brother elicit a radiant smile from his sister, all while the youngest sibling observes with wide-eyed wonder, securely nestled between them. It’s a snapshot of the beautiful, fleeting journey of growing up together.
+contextual: This image tells a story of childhood's inherent resilience—the ability to create a world of joy and connection from the simplest of things. On a simple blue blanket in a yard, these siblings build a fortress of happiness. Their individual personalities—the jester, the observer, and the joyous spirit—unite, demonstrating that the strongest defense against the complexities of the world is the simple, powerful bond of family.
+descriptive: Three young children are lying on their stomachs on a blue blanket spread across a lush green lawn. On the left, a young boy in a blue shirt playfully makes "goggles" over his eyes with his hands, his feet kicked up in the air. In the middle, a baby girl in a pink top and a white floral headband looks at the camera with large, curious eyes. On the right, a young girl with long blonde hair beams with a wide, happy smile.
+MOMENT: A perfect moment of sibling connection on a sunny lawn, full of goofy faces and pure, infectious laughter.
+DETAILS: Three young siblings—a boy, a girl, and a baby—lie on a blue blanket on a grassy lawn. The boy makes a silly face, his older sister smiles with delight, and the baby in pink looks on curiously.
+Zero-shot: Three children are lying in a row on their stomachs on a dark blue blanket in a grassy yard. On the left, a young boy with blond hair, wearing a light blue button-up shirt, makes circles around his eyes with his fingers. His feet, in white-soled shoes, are kicked up behind him. In the center is a baby with a white headband and a pink shirt, looking directly at the camera. On the right, a young girl with long blonde hair and a floral top smiles broadly, showing her teeth. The grass is green, and the background is softly out of focus.
+---- Next Trial ----
+I uploaded AG_system/contextual_photo_integration/processed_webp_thumbnails//IMG_6659-adasstory-h360-thumb.webp
+to https://console.cloud.google.com/vertex-ai/studio/multimodal, using gemini-2.0-flash-001, with the following prompt. It utilized tokens as follows:
+Text
+621
+Images
+1,806
+Total tokens
+2,427
+
+----- Prompt ----
+Generate captions for this image using each of these prompts:
+prompts = {
+"emotional": "Describe the emotional moment and feelings in this image of a young girl's journey",
+"contextual": "What story does this image tell about childhood resilience?",
+"descriptive": "Describe what you see, focusing on the people and their interactions",
+"MOMENT": "A brief, poetic description of the emotional moment or action (15-20 words)
+Focus on: what's happening, the feeling, the discovery, the connection
+Example: "The wonder of discovering a butterfly on a sunny afternoon"",
+"DETAILS": "Specific visual and contextual information (30-40 words)
+Include: Who's in the photo (young girl, family members), setting, activities,
+medical context if visible, season/time indicators
+Example: "A young girl in a yellow dress gently observes a monarch butterfly
+in a hospital garden. Her careful movements show both curiosity and gentleness."",
+"Zero-shot": "Describe this photo in detail"
+}
+
+Format your response as:
+emotional: [your description from that prompt],
+contextual: [your description from that prompt],
+etc
+---- Response -----
+emotional: [The uninhibited joy of childhood, expressed through playful gestures and genuine smiles, is contagious in this scene of sibling love and carefree fun.]
+contextual: [This image speaks of childhood resilience through the simple act of play. Despite any challenges, these children find joy and connection in each other's company, creating a safe and happy world on their blanket.]
+descriptive: [We see three young children lying on a blue blanket spread on a lush green lawn. A boy on the left makes binoculars with his hands, playfully peering through them. To his right, a baby in a pink outfit looks directly at the camera with wide, curious eyes. On the right, a slightly older girl beams a bright, genuine smile.]
+MOMENT: [Little eyes peer through homemade lenses, a toothy grin shines, tiny hands grasp. A shared moment creating a world of pure, unfiltered joy.]
+DETAILS: [A boy in a blue shirt uses his hands to make binoculars while lying on a blue blanket. A baby in a pink dress and headband is in the middle. A blonde girl in a floral dress smiles widely. They are all outdoors on green grass.]
+Zero-shot: [This photo shows three young children lying on a blue blanket spread out on green grass. The child on the left is a boy wearing a blue shirt and jeans. He is making binoculars with his hands in front of his eyes, and his feet are kicked up in the air. Next to him is a baby girl in a pink dress and white headband; she's looking directly at the camera. On the right is a blonde girl wearing a floral dress; she is smiling broadly. The background is out of focus, suggesting they are in a backyard or park.]

@@ -1,4 +1,6 @@
 // ===== CONFIGURATION =====
+//FOR PRODUCTION
+///*
 const API_CONFIG = {
     baseUrl: 'https://memories.adas-spark.org/api',
     endpoints: {
@@ -6,6 +8,21 @@ const API_CONFIG = {
     },
     timeout: 30000
 };
+//*/
+
+//FOR LOCAL TESTING
+/*
+const API_CONFIG = {
+    baseUrl: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? '/api'  // Use relative path for local testing
+        : 'https://memories.adas-spark.org/api',
+    endpoints: {
+        search: '/search',
+        questions: '/questions'  // Add this
+    },
+    timeout: 30000
+};
+*/
 
 // ===== UTILITY FUNCTIONS =====
 const utils = {
@@ -167,8 +184,12 @@ createApp({
             isLoadingQuestions: false,
 
             // Performance tracking
-            searchStartTime: null
-        };
+            searchStartTime: null,
+            
+            // Photo functionality
+            selectedPhoto: null,
+            photoLoadStates: {},
+            isMobile: window.innerWidth < 1024        };
     },
 
     computed: {
@@ -218,13 +239,26 @@ createApp({
     
             try {
                 console.log('Loading dynamic example questions...');
+                // For Production
+                ///*
                 const response = await fetch(`${API_CONFIG.baseUrl}/questions`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json'
                     }
                 });
-        
+                //*/
+
+                // For Local Testing
+                /*
+                const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.questions || '/questions'}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                */
+
                 if (!response.ok) {
                     throw new Error(`Questions API failed: ${response.status}`);
                 }
@@ -374,13 +408,20 @@ createApp({
         selectAnswer(answer, index) {
             this.selectedAnswer = answer;
             this.selectedAnswerIndex = index;
+            
+            // Initialize photo load states
+            if (answer.related_photos) {
+                answer.related_photos.forEach(photo => {
+                    this.photoLoadStates[photo.photo_id] = 'loading';
+                });
+            }
 
             analytics.trackEvent('answer_selected', {
                 answer_index: index,
-                answer_id: answer.answer_id || 'unknown'
+                answer_id: answer.answer_id || 'unknown',
+                has_photos: answer.related_photos?.length > 0
             });
-        },
-
+        },        
         /**
          * Clear search results and UI state
          */
@@ -390,8 +431,9 @@ createApp({
             this.selectedAnswerIndex = 0;
             this.showResults = false;
             this.error = null;
+            this.selectedPhoto = null;
+            this.photoLoadStates = {};
         },
-
         /**
          * Clear error message
          */
@@ -404,6 +446,80 @@ createApp({
          */
         formatDate(dateString) {
             return utils.formatDate(dateString);
+        },
+        
+        // ===== PHOTO FUNCTIONALITY METHODS =====
+        
+        /**
+         * Handle photo load success
+         */
+        onPhotoLoad(photoId) {
+            this.photoLoadStates[photoId] = 'loaded';
+        },        
+        /**
+         * Handle photo load error
+         */
+        onPhotoError(photoId) {
+            this.photoLoadStates[photoId] = 'error';
+            
+            analytics.trackEvent('photo_load_error', {
+                photo_id: photoId,
+                query: this.lastSearchQuery
+            });
+        },
+        
+        /**
+         * Open photo modal
+         */
+        openPhotoModal(photo) {
+            this.selectedPhoto = photo;
+            document.body.style.overflow = 'hidden';
+            
+            // Focus management
+            this.$nextTick(() => {
+                const closeButton = document.querySelector('.modal-close');
+                if (closeButton) closeButton.focus();
+            });
+            
+            analytics.trackEvent('photo_opened', {
+                photo_id: photo.photo_id,
+                relevance_score: photo.relevance_score,
+                position: photo.position,
+                query: this.lastSearchQuery
+            });
+        },
+        
+        /**
+         * Close photo modal
+         */
+        closePhotoModal() {
+            const photoId = this.selectedPhoto?.photo_id;
+            this.selectedPhoto = null;
+            document.body.style.overflow = '';
+            
+            // Return focus to trigger element
+            this.$nextTick(() => {
+                const trigger = document.querySelector(`[data-photo-id="${photoId}"]`);
+                if (trigger) trigger.focus();
+            });
+        },
+        
+        /**
+         * Handle keyboard events for photo modal
+         */
+        handlePhotoKeydown(event) {
+            if (event.key === 'Escape' && this.selectedPhoto) {
+                this.closePhotoModal();
+            }
+        },
+        
+        /**
+         * Get user-friendly relevance label
+         */
+        getRelevanceLabel(score) {
+            if (score > 0.8) return 'Highly Related';
+            if (score > 0.65) return 'Related';
+            return 'Possibly Related';
         },
 
         /**
@@ -470,6 +586,14 @@ createApp({
                     this.searchQuery = '';
                 }
             }
+        });
+
+        // Add photo modal keyboard handler
+        document.addEventListener('keydown', this.handlePhotoKeydown);
+        
+        // Handle window resize for mobile detection
+        window.addEventListener('resize', () => {
+            this.isMobile = window.innerWidth < 1024;
         });
 
         // Track page load
