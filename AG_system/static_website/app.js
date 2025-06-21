@@ -189,7 +189,12 @@ createApp({
             // Photo functionality
             selectedPhoto: null,
             photoLoadStates: {},
-            isMobile: window.innerWidth < 1024        };
+            isMobile: window.innerWidth < 1024,
+
+            // Source display
+            activeSourcePopup: null,
+            activeSourcePopupCoordinates: { x: 0, y: 0 }
+        };
     },
 
     computed: {
@@ -419,9 +424,37 @@ createApp({
             analytics.trackEvent('answer_selected', {
                 answer_index: index,
                 answer_id: answer.answer_id || 'unknown',
-                has_photos: answer.related_photos?.length > 0
+                has_photos: answer.related_photos?.length > 0,
+                has_sources: answer.sources?.length > 0
             });
-        },        
+            this.hideSourceDetails(); // Hide any open source popup when changing answers
+        },
+
+        // ===== SOURCE FUNCTIONALITY METHODS =====
+        showSourceDetails(source, event) {
+            this.activeSourcePopup = source;
+            // Position popup near the clicked element
+            const rect = event.target.getBoundingClientRect();
+            this.activeSourcePopupCoordinates = {
+                x: rect.left + window.scrollX,
+                y: rect.bottom + window.scrollY + 5 // 5px below the element
+            };
+            analytics.trackEvent('source_popup_opened', {
+                source_id: source.id,
+                source_title: source.title
+            });
+        },
+
+        hideSourceDetails() {
+            if (this.activeSourcePopup) {
+                analytics.trackEvent('source_popup_closed', {
+                    source_id: this.activeSourcePopup.id,
+                    source_title: this.activeSourcePopup.title
+                });
+                this.activeSourcePopup = null;
+            }
+        },
+
         /**
          * Clear search results and UI state
          */
@@ -433,6 +466,7 @@ createApp({
             this.error = null;
             this.selectedPhoto = null;
             this.photoLoadStates = {};
+            this.hideSourceDetails();
         },
         /**
          * Clear error message
@@ -581,7 +615,11 @@ createApp({
 
             // Clear search when pressing Escape
             if (event.key === 'Escape') {
-                if (this.showResults) {
+                if (this.activeSourcePopup) {
+                    this.hideSourceDetails();
+                } else if (this.selectedPhoto) {
+                    // Already handled by handlePhotoKeydown, but good to be explicit if order changes
+                } else if (this.showResults) {
                     this.clearResults();
                     this.searchQuery = '';
                 }
@@ -590,6 +628,27 @@ createApp({
 
         // Add photo modal keyboard handler
         document.addEventListener('keydown', this.handlePhotoKeydown);
+
+        // Add click outside listener for source popup
+        document.addEventListener('click', (event) => {
+            if (this.activeSourcePopup) {
+                const popupElement = this.$el.querySelector('.source-popup'); // Requires ref or more specific selector
+                const triggerElements = this.$el.querySelectorAll('.source-ref-button'); // Class to be added to trigger
+
+                let clickedOnTrigger = false;
+                if (triggerElements) {
+                    triggerElements.forEach(el => {
+                        if (el.contains(event.target)) {
+                            clickedOnTrigger = true;
+                        }
+                    });
+                }
+
+                if (popupElement && !popupElement.contains(event.target) && !clickedOnTrigger) {
+                    this.hideSourceDetails();
+                }
+            }
+        });
         
         // Handle window resize for mobile detection
         window.addEventListener('resize', () => {
