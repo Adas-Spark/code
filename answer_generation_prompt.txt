@@ -1,0 +1,78 @@
+You are an expert in providing detailed, nuanced, and emotionally resonant answers based on the given CaringBridge data. For each question (provided in the attached txt file), provide up to 5 unique answers if 5 compelling answers exist in the corpus.
+
+BIOGRAPHICAL CONTEXT:
+Ada Swenson was born on June 8, 2018, and passed away on July 22, 2023, at the age of 5, after battling leukemia. She was the daughter of Joel and Tami Swenson, sister to older brother Oliver and younger sister Eleanor (Ellie). Ada was initially diagnosed with Acute Undifferentiated Leukemia (AUL) on May 5th, 2022, which later changed to Acute Myeloid Leukemia (AML) after her bone marrow transplant. She received treatment primarily at American Family Children's Hospital (AFCH) in Madison, Wisconsin, with consultations at St. Jude Children's Research Hospital and St. Louis Children's Hospital. Ada underwent a bone marrow transplant with her brother Oliver as the donor. Her brother Oliver also donated NK Cells as part of a Phase I clinical trial she was part of. Throughout her journey, she maintained her spirit, humor, and love for life, which inspired the creation of Ada's Spark, a non-profit organization that continues her legacy.
+
+RESPONSE FORMAT:
+Format your response as a JSON array with this structure:
+[
+  {
+    "question_id": "Q1",
+    "question_text": "What was Ada like as a person?",
+    "category": "character", 
+    "answers": [
+      {
+        "answer_id": "Q1A1",
+        "answer_text": "Ada was known for her incredible resilience and joy. When someone said \"She's amazing,\" it captured her spirit perfectly.",
+        "source_post_id": "relevant_post_id",
+        "source_date": "post_date"
+      },
+      ...
+    ]
+  },
+  ...
+]
+
+Note: The fields 'source_post_id' and 'source_date' may contain a single value or a list of values to indicate the source(s) for the answer.
+
+CRITICAL JSON FORMATTING RULES:
+- All quotes within answer_text must be escaped with backslashes: use \" instead of "
+- Escape backslashes: use \\ instead of \
+- Replace newlines with \n: "First line\nSecond line"
+- Remove or escape any tab characters
+- Keep answer_text as a single continuous string without line breaks
+- Double-check that every JSON object ends with proper comma placement
+- Ensure all brackets and braces are properly closed
+- Example: "Ada said \"hello\" and wouldn't stop laughing."
+
+STORYTELLING GUIDELINES:
+
+1. NARRATIVE STRUCTURE
+   - Craft each answer as a complete mini-story with a clear beginning, middle, and satisfying conclusion
+   - Begin with context to set the scene, develop with specific details and examples, and end with impact or meaning
+   - Create a narrative arc that engages the reader emotionally and leaves them with a clear impression of Ada
+
+2. EMOTIONAL RESONANCE
+   - Emphasize emotional moments using direct quotes from Ada or her family whenever possible
+   - Highlight emotional transitions and transformations - moments where difficulty turned to joy or where someone's spirit (Ada's or others') transformed a situation
+   - Balance light, humorous moments with deeper, poignant reflections
+   - Include sensory details that help paint a vivid picture of the experiences described
+
+3. THEMATIC UNITY
+   - Each answer should not just relate facts but convey something meaningful about Ada's character
+   - Connect individual stories to larger themes about Ada's personality, spirit, or impact
+   - Ensure every detail serves to illuminate a core aspect of who Ada was or what she meant to others
+   - Maintain a consistent emotional tone appropriate to the specific aspect of Ada being described
+
+4. AUTHENTIC VOICE
+   - Preserve Ada's exact phrases and expressions (like "Sassy Robert," "meatmeal")
+   - Include contrasts (e.g., between medical severity and Ada's playfulness) to highlight her extraordinary character
+   - Capture both joy and challenge to reflect the full spectrum of Ada's experience
+   - When relevant, include the voices and perspectives of Ada's family members, friends, caregivers, etc
+
+SOURCE HANDLING:
+- For answers supported by multiple sources, create a cohesive synthesis of the information
+- When multiple sources support an answer, provide a comma-separated list of all source_post_id and source_date values
+- For broad questions that appear throughout many posts:
+  * Use representative examples rather than trying to cite every instance
+  * Select the most emotionally resonant or detailed examples from the corpus
+  * Provide a chronological narrative when the question involves evolution over time
+  * Include the most relevant source_post_id and source_date values, even if they are fewer than the total number of supporting posts
+
+TECHNICAL REQUIREMENTS:
+- Provide detailed, captivating answers with specific examples and anecdotes
+- Ensure sufficient context within each answer for clear understanding
+- Maintain the authentic voice and emotional tone of the original posts
+- Include specific details (names, ages, locations) when they add significant context
+- Always prioritize factual accuracy while handling the subject with care and respect
+
