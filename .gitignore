@@ -40,10 +40,12 @@ AG_system/contextual_photo_integration/original_downloads/
 AG_system/contextual_photo_integration/processed_webp/
 AG_system/contextual_photo_integration/processed_webp_thumbnails/
 
-# But keep lineage and metadata
+# But keep lineage and metadata and some examples
 !AG_system/contextual_photo_integration/lineage/
 !AG_system/contextual_photo_integration/*.csv
 !AG_system/contextual_photo_integration/*.json
+!AG_system/EXAMPLE_scraped_data_with_author_and_text_changes.json
+!AG_system/proof_of_concepts/EXAMPLE_generated_qa_pairs_combined_clean_20250603_214922.json
 
 # Common credential and token files (general)
 >>>>>>> contextual-photo-integration
