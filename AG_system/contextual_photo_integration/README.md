@@ -613,7 +613,7 @@ The script's behavior can be customized using the following command-line argumen
 *   `--image-source [full|thumbnail]`: Specifies whether to use `full` resolution WebP images (from the `url` column in the input CSV) or `thumbnail` images (from the `wordpress_url_thumbnail` column) for captioning. Defaults to `full`. Using thumbnails can speed up processing and reduce costs.
 *   `--ada-context`: If specified, enables the inclusion of Ada's temporal context (defined in `ADA_CONTEXT` and `IMPORTANT_DATES_STR` within the script) in the prompts for `CONTEXTUAL`, `STORY`, and `CHARACTER`.
 *   `--limit N`: Optionally limits the number of images to process from the input file (useful for testing).
-*   `--force-reprocess`: If specified, reprocesses all images and their prompt combinations, even if they have existing successfully processed entries in the output file.
+*   `--force-reprocess`: If specified, reprocesses **all** images and their prompt combinations, even if they have existing successfully processed entries in the output file. Consider just deleting the records from the output file if it errored or you want to rerun it.
 
 **Prompts Used:**
 
@@ -631,6 +631,8 @@ The script utilizes a predefined dictionary (`PROMPTS_TO_TEST`) to generate dive
 
 *   **Retry Logic**: The script incorporates a retry mechanism (via the `process_image_with_retry` function) to handle transient API errors (e.g., timeouts). It will attempt to reprocess an image up to `MAX_RETRIES` times with exponential backoff.
 *   **Stateful Processing**: To avoid redundant work and allow for interruption and resumption, the script loads existing results from `lineage/multi_prompt_enrichment_output.csv` upon starting. It calculates a `param_hash` (using `calculate_processing_hash`) for each unique combination of image, model, prompt, and other processing parameters. If a hash corresponding to a successful prior attempt is found, that specific image-prompt combination is skipped, unless the `--force-reprocess` flag is used.
+
+Note: you may want to run it with caffeinate (e.g. caffeinate -i python scripts/final_enrichment.py --model gemini-2.5-flash --input-file lineage/complete_image_lineage.csv --ada-context --image-source thumbnail) for long runs
 
 **Traceability Hashes:**
 
@@ -956,6 +958,7 @@ Run `python scripts/fix_lineage_MD5s.py` to upgrade existing v2.0 lineage files 
 
 #### **Planned Features**
 - **Enhanced metadata:** EXIF data extraction and preservation in lineage
+- **Parallelize final_enrichment.py:** Input rows could be split and batches run in parallel, captions could be run in parallel, etc. If you go those two routes make sure to rejoin into one file for pinecone upload (or change the upload workflow)
 
 #### **Scalability Considerations**
 - **Cloud processing:** Migration to cloud-based image processing for large datasets

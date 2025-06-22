@@ -48,7 +48,7 @@ Ada's Spark Memory Engine is a semantic search system that allows users to ask q
 - Official documents and records
 
 ### High Priority: Contextual Photo Integration
-**Status**: Core scripts and a detailed workflow for the photo integration pipeline have been developed and documented. The system covers data extraction from Google Takeout, local image processing (WebP conversion, thumbnail generation, dual MD5 tracking), WordPress hosting and URL management, and AI-driven caption generation. The pipeline appears robust and ready for full execution or further testing.
+**Status**: The contextual photo integration system has been successfully merged and integrated. Core scripts and a detailed workflow for the photo integration pipeline are in place, covering data extraction from Google Takeout, local image processing (WebP conversion, thumbnail generation, dual MD5 tracking), WordPress hosting and URL management, and AI-driven caption generation. The pipeline is robust and ready for full execution or further testing.
 **Overview**: Dynamic photo serving system that matches user Q&A responses with relevant photos using semantic search. The system relies on a multi-stage processing pipeline to prepare images and generate rich metadata before AI enrichment and integration.
 - Embed the answer text (from the Q&A) on-the-fly using Pinecone
 - Search against pre-generated photo captions (focusing on emotions/moments or perhaps scene descriptions)
@@ -58,7 +58,7 @@ Ada's Spark Memory Engine is a semantic search system that allows users to ask q
 - Image processing & thumbnails: `scripts/process_downloaded_images.py`, `scripts/generate_thumbnails.py`
 - WordPress integration: `scripts/merge_wordpress_data.py`
 - AI captioning: `scripts/final_enrichment.py`
-**Detailed Plan**: See [README.md](/AG_system/contextual_photo_integration/README.md) for complete technical specification and implementation roadmap. Currently being developed in contextual-photo-integration branch
+**Detailed Plan**: See [README.md](/AG_system/contextual_photo_integration/README.md) for complete technical specification and implementation roadmap.
 
 
 ## Technical Improvements & Quality Assurance Pipeline

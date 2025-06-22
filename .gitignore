@@ -26,10 +26,15 @@ Thumbs.db
 .env
 *.db
 
+
+=======
 # Virtual documents and temp files
 .virtual_documents/
 */.virtual_documents/
 
+# Common credential and token files
+*.json
+=======
 # Contextual Photo Integration - Binary Files
 AG_system/contextual_photo_integration/original_downloads/
 AG_system/contextual_photo_integration/processed_webp/
@@ -41,6 +46,7 @@ AG_system/contextual_photo_integration/processed_webp_thumbnails/
 !AG_system/contextual_photo_integration/*.json
 
 # Common credential and token files (general)
+>>>>>>> contextual-photo-integration
 *.pickle
 token.*
 credentials.*
@@ -52,6 +58,7 @@ credentials.*
 *.tmp
 *.temp
 *~
+=======
 
 # Additional project-specific excludes
 AG_system/contextual_photo_integration/takout_zips/

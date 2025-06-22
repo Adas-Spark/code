@@ -226,11 +226,12 @@ def prepare_pinecone_records(merged_df, embeddings):
     print("Preparing Pinecone records with metadata...")
     
     for i, row in merged_df.iterrows():
-        # Generate Pinecone ID
+        # Generate Pinecone ID (handle both 'record_hash' and 'param_hash' column names)
+        hash_value = row.get('record_hash', row.get('param_hash', 'unknown'))
         vector_id = generate_pinecone_id(
             row['original_filename'],
             row['prompt_name'],
-            row['record_hash']
+            hash_value
         )
         
         # Calculate Ada's age at photo time
@@ -246,13 +247,13 @@ def prepare_pinecone_records(merged_df, embeddings):
             "photo_date": row['photo_taken_time'] if row['photo_taken_time'] != 'N/A' else None,
             "ada_age": ada_age,
             "model_used": row['model_used'],
-            "record_hash": row['record_hash'],
+            "record_hash": hash_value,
             "source_type": "photo_caption",
-            "temporal_context": row['temporal_context'] if row['temporal_context'] != 'N/A' else None
+            "temporal_context": row['temporal_context'] if (pd.notna(row['temporal_context']) and row['temporal_context'] != 'N/A') else None
         }
         
-        # Remove None values to keep metadata clean
-        metadata = {k: v for k, v in metadata.items() if v is not None}
+        # Remove None values and NaN values to keep metadata clean
+        metadata = {k: v for k, v in metadata.items() if v is not None and not (isinstance(v, float) and np.isnan(v))}
         
         record = {
             "id": vector_id,
