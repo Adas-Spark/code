@@ -66,7 +66,7 @@ def main():
         test_embed_response = pc.inference.embed(
             model=model_name,
             inputs=["This is a test sentence."],
-            parameters={"input_type": "passage"} # or "query" / "document" depending on use case
+            parameters={"input_type": "query"} # or "passage" / "document" depending on use case
         )
         # The response is a list of Embedding objects
         if test_embed_response and hasattr(test_embed_response[0], 'values'):
@@ -162,27 +162,13 @@ def main():
     # Generate embeddings in batches for question texts
     def generate_embeddings_in_batches(texts, model, batch_size=90):
         all_embeddings = []
-        # Note: input_type for embedding questions to be queried should be "query" or "search_query"
-        # However, when storing them as documents that will be searched against, "document" or "search_document"
-        # or "passage" is often used. Given the original notebook used "query" for generating embeddings
-        # for questions that were then stored, this might be a point of fine-tuning.
-        # Let's use "passage" as a general type for content being stored for similarity search.
-        # The Pinecone docs suggest "document" for texts to be stored in the index.
-        # The original notebook used pc.inference.embed(..., parameters={"input_type": "query"}) for generating question embeddings before upsert.
-        # Let's stick to "query" to match that, assuming questions are query-like.
-        # Or, more appropriately, "search_document" if available, or "document".
-        # The `llama-text-embed-v2` model documentation should clarify optimal input_type for stored texts.
-        # For now, using "passage" as a neutral choice for stored content.
-        # Update: The original notebook's `generate_embeddings_in_batches` used "query".
-        # And the test embedding used "passage".
-        # The new Pinecone client examples often use "document". Let's use "document".
 
         for i in tqdm(range(0, len(texts), batch_size), desc="Generating embeddings"):
             batch_texts = texts[i:i + batch_size]
             response = pc.inference.embed(
                 model=model,
                 inputs=batch_texts,
-                parameters={"input_type": "document"}
+                parameters={"input_type": "query"}
             )
             batch_embeddings = [embedding.values for embedding in response]
             all_embeddings.extend(batch_embeddings)
