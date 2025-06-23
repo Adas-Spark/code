@@ -313,7 +313,7 @@ def enrich_qa_data(qa_filepath: str, scraped_data_filepath: str, output_filepath
                 current_urls = []
                 found_sources = 0
 
-                # Enhanced source_post_id processing to handle both strings and lists
+                # Enhanced source_post_id processing - original data is never modified
                 source_post_id_list = []
 
                 if source_post_ids_str:
@@ -321,14 +321,14 @@ def enrich_qa_data(qa_filepath: str, scraped_data_filepath: str, output_filepath
                         # Handle comma-separated string format
                         source_post_id_list = [pid.strip() for pid in source_post_ids_str.split(',') if pid.strip()]
                     elif isinstance(source_post_ids_str, list):
-                        # Handle list format - validate each item is a string
+                        # Handle list format - process each item (original data preserved)
                         source_post_id_list = [str(pid).strip() for pid in source_post_ids_str if str(pid).strip()]
-                        print(f"Info: Converted list source_post_id to string list in Question {question_idx}, Answer {answer_idx}")
+                        print(f"Info: Processing list-format source_post_id in Question {question_idx}, Answer {answer_idx} (original preserved)")
                     else:
                         # Handle other types by attempting string conversion
                         try:
                             source_post_id_list = [str(source_post_ids_str).strip()]
-                            print(f"Info: Converted {type(source_post_ids_str)} source_post_id to string in Question {question_idx}, Answer {answer_idx}")
+                            print(f"Info: Processing {type(source_post_ids_str)} source_post_id in Question {question_idx}, Answer {answer_idx} (original preserved)")
                         except:
                             print(f"Warning: Could not process source_post_id of type {type(source_post_ids_str)} in Question {question_idx}, Answer {answer_idx}")
                             source_post_id_list = []
@@ -359,7 +359,7 @@ def enrich_qa_data(qa_filepath: str, scraped_data_filepath: str, output_filepath
                             current_titles.append("")
                             current_urls.append("")
 
-                # Add new fields as string representations of lists (for Pinecone compatibility)
+                # Add new enrichment fields only - original source_post_id field is preserved unchanged
                 answer["source_title"] = str(current_titles)
                 answer["source_url"] = str(current_urls)
                 

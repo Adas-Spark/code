@@ -46,6 +46,7 @@ AG_system/contextual_photo_integration/processed_webp_thumbnails/
 !AG_system/contextual_photo_integration/*.json
 !AG_system/EXAMPLE_scraped_data_with_author_and_text_changes.json
 !AG_system/proof_of_concepts/EXAMPLE_generated_qa_pairs_combined_clean_20250603_214922.json
+!AG_system/proof_of_concepts/EXAMPLE_generated_qa_pairs_combined_clean_20250603_214922_enriched.json
 
 # Common credential and token files (general)
 >>>>>>> contextual-photo-integration
