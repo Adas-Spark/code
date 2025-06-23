@@ -341,7 +341,7 @@ def parse_arguments():
     
     parser.add_argument('--index-name',
                         type=str,
-                        default='adas-memory-qa-poc',
+                        default='adas-memory-qa-prod', # Updated default index name
                         help='Pinecone index name (default: %(default)s)')
     
     parser.add_argument('--namespace',
