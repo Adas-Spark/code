@@ -24,6 +24,15 @@ const mockSearchResults = {
       answer_text: 'Ada was a beacon of unwavering spirit and resilience. Even when faced with the intense pain and nausea of chemotherapy, she\'d insist, sometimes literally yelling, "I just want to play" and then proceed to do exactly that.',
       source_post_id: 'post-123',
       source_date: '2023-05-15',
+      title: 'Ada\'s Amazing Day', // Added for backward compatibility
+      url: 'https://caringbridge.org/post-123', // Added for backward compatibility
+      sources: [{ // THIS IS WHAT WAS MISSING!
+        id: 'post-123',
+        title: 'Ada\'s Amazing Day at the Hospital',
+        url: 'https://caringbridge.org/post-123',
+        date: '2023-05-15',
+        type: 'CaringBridge Post'
+      }],
       related_photos: [
         {
           photo_id: 'photo_001',

@@ -1,28 +1,26 @@
+// ===== CONFIGURATION FLAG =====
+// Set to 1 for local testing, 0 for production or preview (e.g. 'vercel' with no flags)
+const IS_LOCAL_TESTING = 0;
+
 // ===== CONFIGURATION =====
-//FOR PRODUCTION
-///*
-const API_CONFIG = {
+const API_CONFIG = IS_LOCAL_TESTING ? {
+    // Local testing configuration
+    baseUrl: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? '/api'  // Use relative path for local testing
+        : 'https://memories.adas-spark.org/api',
+    endpoints: {
+        search: '/search',
+        questions: '/questions'
+    },
+    timeout: 30000
+} : {
+    // Production configuration
     baseUrl: 'https://memories.adas-spark.org/api',
     endpoints: {
         search: '/search'
     },
     timeout: 30000
 };
-//*/
-
-//FOR LOCAL TESTING
-/*
-const API_CONFIG = {
-    baseUrl: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? '/api'  // Use relative path for local testing
-        : 'https://memories.adas-spark.org/api',
-    endpoints: {
-        search: '/search',
-        questions: '/questions'  // Add this
-    },
-    timeout: 30000
-};
-*/
 
 // ===== UTILITY FUNCTIONS =====
 const utils = {
@@ -189,7 +187,12 @@ createApp({
             // Photo functionality
             selectedPhoto: null,
             photoLoadStates: {},
-            isMobile: window.innerWidth < 1024        };
+            isMobile: window.innerWidth < 1024,
+
+            // Source display
+            activeSourcePopup: null,
+            activeSourcePopupCoordinates: { x: 0, y: 0 }
+        };
     },
 
     computed: {
@@ -239,25 +242,21 @@ createApp({
     
             try {
                 console.log('Loading dynamic example questions...');
-                // For Production
-                ///*
-                const response = await fetch(`${API_CONFIG.baseUrl}/questions`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                //*/
-
-                // For Local Testing
-                /*
-                const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.questions || '/questions'}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                */
+                
+                // Use flag to determine which API endpoint to call
+                const response = IS_LOCAL_TESTING ? 
+                    await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.questions || '/questions'}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    }) : 
+                    await fetch(`${API_CONFIG.baseUrl}/questions`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
 
                 if (!response.ok) {
                     throw new Error(`Questions API failed: ${response.status}`);
@@ -306,12 +305,7 @@ createApp({
             this.lastSearchQuery = this.searchQuery;
 
             try {
-                // Simulate API call for development
                 const response = await apiService.searchMemories(this.searchQuery);
-
-                // Uncomment the line below when your API is ready
-                // const response = await apiService.searchMemories(this.searchQuery);
-
                 this.handleSearchSuccess(response);
 
             } catch (error) {
@@ -419,9 +413,37 @@ createApp({
             analytics.trackEvent('answer_selected', {
                 answer_index: index,
                 answer_id: answer.answer_id || 'unknown',
-                has_photos: answer.related_photos?.length > 0
+                has_photos: answer.related_photos?.length > 0,
+                has_sources: answer.sources?.length > 0
             });
-        },        
+            this.hideSourceDetails(); // Hide any open source popup when changing answers
+        },
+
+        // ===== SOURCE FUNCTIONALITY METHODS =====
+        showSourceDetails(source, event) {
+            this.activeSourcePopup = source;
+            // Position popup near the clicked element
+            const rect = event.target.getBoundingClientRect();
+            this.activeSourcePopupCoordinates = {
+                x: rect.left + window.scrollX,
+                y: rect.bottom + window.scrollY + 5 // 5px below the element
+            };
+            analytics.trackEvent('source_popup_opened', {
+                source_id: source.id,
+                source_title: source.title
+            });
+        },
+
+        hideSourceDetails() {
+            if (this.activeSourcePopup) {
+                analytics.trackEvent('source_popup_closed', {
+                    source_id: this.activeSourcePopup.id,
+                    source_title: this.activeSourcePopup.title
+                });
+                this.activeSourcePopup = null;
+            }
+        },
+
         /**
          * Clear search results and UI state
          */
@@ -433,6 +455,7 @@ createApp({
             this.error = null;
             this.selectedPhoto = null;
             this.photoLoadStates = {};
+            this.hideSourceDetails();
         },
         /**
          * Clear error message
@@ -581,7 +604,11 @@ createApp({
 
             // Clear search when pressing Escape
             if (event.key === 'Escape') {
-                if (this.showResults) {
+                if (this.activeSourcePopup) {
+                    this.hideSourceDetails();
+                } else if (this.selectedPhoto) {
+                    // Already handled by handlePhotoKeydown, but good to be explicit if order changes
+                } else if (this.showResults) {
                     this.clearResults();
                     this.searchQuery = '';
                 }
@@ -590,6 +617,27 @@ createApp({
 
         // Add photo modal keyboard handler
         document.addEventListener('keydown', this.handlePhotoKeydown);
+
+        // Add click outside listener for source popup
+        document.addEventListener('click', (event) => {
+            if (this.activeSourcePopup) {
+                const popupElement = this.$el.querySelector('.source-popup'); // Requires ref or more specific selector
+                const triggerElements = this.$el.querySelectorAll('.source-ref-button'); // Class to be added to trigger
+
+                let clickedOnTrigger = false;
+                if (triggerElements) {
+                    triggerElements.forEach(el => {
+                        if (el.contains(event.target)) {
+                            clickedOnTrigger = true;
+                        }
+                    });
+                }
+
+                if (popupElement && !popupElement.contains(event.target) && !clickedOnTrigger) {
+                    this.hideSourceDetails();
+                }
+            }
+        });
         
         // Handle window resize for mobile detection
         window.addEventListener('resize', () => {

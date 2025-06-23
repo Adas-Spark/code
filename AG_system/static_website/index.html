@@ -9,7 +9,7 @@
     <title>Ada's Spark: Hope Against Childhood Cancer</title>
     
     <!-- CSS -->
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20250123">
     
     <!-- Vue.js from CDN -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -151,11 +151,30 @@
                                     <h3 class="answer-label">Answer:</h3>
                                     <div class="answer-content">
                                         <p v-if="selectedAnswer" class="answer-text">{{ selectedAnswer.answer_text }}</p>
+
+                                        <!-- Source References List -->
+                                        <div v-if="selectedAnswer && selectedAnswer.sources && selectedAnswer.sources.length > 0" class="sources-list">
+                                            <h4 class="sources-title">Sources:</h4>
+                                            <ul>
+                                                <li v-for="(source, index) in selectedAnswer.sources" :key="source.id || index">
+                                                    <button
+                                                        @click="showSourceDetails(source, $event)"
+                                                        class="source-ref-button"
+                                                        type="button"
+                                                        :aria-label="'View details for source ' + (index + 1)"
+                                                    >
+                                                        [{{ index + 1 }}]
+                                                    </button>
+                                                </li>
+                                            </ul>
+                                        </div>
+
                                         <div v-if="selectedAnswer" class="answer-meta">
-                                            <span class="source-info">
+                                            <!-- Original source_date display - consider removing or re-evaluating if individual sources have dates -->
+                                            <!-- <span class="source-info">
                                                 <i class="fas fa-calendar" aria-hidden="true"></i>
                                                 {{ formatDate(selectedAnswer.source_date) }}
-                                            </span>
+                                            </span> -->
                                             <span class="similarity-score">
                                                 <i class="fas fa-chart-bar" aria-hidden="true"></i>
                                                 {{ Math.round(searchResults[0]?.score * 100) }}% match
@@ -165,6 +184,32 @@
                                                 {{ selectedAnswer.related_photos.length }} photos
                                             </span>
                                         </div>
+                                    </div>
+                                </div>
+
+                                <!-- Source Details Popup -->
+                                <div
+                                    v-if="activeSourcePopup"
+                                    class="source-popup"
+                                    :style="{ position: 'absolute', left: activeSourcePopupCoordinates.x + 'px', top: activeSourcePopupCoordinates.y + 'px' }"
+                                    role="dialog"
+                                    aria-modal="true"
+                                    aria-labelledby="source-popup-title"
+                                >
+                                    <div class="source-popup-content">
+                                        <h5 id="source-popup-title" class="source-popup-title">
+                                            <template v-if="activeSourcePopup.url">
+                                                <a :href="activeSourcePopup.url" target="_blank" rel="noopener noreferrer">{{ activeSourcePopup.title }}</a>
+                                            </template>
+                                            <template v-else>
+                                                {{ activeSourcePopup.title }}
+                                            </template>
+                                        </h5>
+                                        <p class="source-popup-type">{{ activeSourcePopup.type }}</p>
+                                        <p class="source-popup-date">Date: {{ formatDate(activeSourcePopup.date) }}</p>
+                                        <button @click="hideSourceDetails" class="source-popup-close" aria-label="Close source details">
+                                            <i class="fas fa-times"></i> Close
+                                        </button>
                                     </div>
                                 </div>
 
@@ -246,7 +291,7 @@
         <!-- Photo Modal -->
         <div 
             v-if="selectedPhoto" 
-            class="photo-modal" 
+            class="photo-modal"
             role="dialog" 
             aria-modal="true"
             aria-labelledby="modal-title"
@@ -293,7 +338,7 @@
     </div>
 
     <!-- JavaScript -->
-    <script src="app.js"></script>
+    <script src="app.js?v=20250123"></script>
     <script>
     // Detect if page is loaded in an iframe and hide banners
     if (window !== window.top) {

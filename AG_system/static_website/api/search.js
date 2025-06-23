@@ -36,6 +36,26 @@ async function getEmbeddingViaRest(text, apiKey) {
   return responseData.data[0].values;
 }
 
+function parseSourceArray(sourceString) {
+  if (!sourceString) return [];
+  
+  try {
+    // If it's already an array, return it
+    if (Array.isArray(sourceString)) return sourceString;
+    
+    // If it's a string that looks like an array, parse it
+    if (typeof sourceString === 'string' && sourceString.startsWith('[')) {
+      return JSON.parse(sourceString);
+    }
+    
+    // If it's a simple string, return as single item array
+    return [sourceString];
+  } catch (error) {
+    console.log('Error parsing source array:', sourceString, error);
+    return [sourceString]; // Fallback to treating as single item
+  }
+}
+
 async function getRelatedPhotos(answerText, answerId, apiKey) {
   try {
     console.log(`=== PHOTO SEARCH START ===`);
@@ -46,7 +66,11 @@ async function getRelatedPhotos(answerText, answerId, apiKey) {
     console.log(`✅ Got embedding, dimension: ${answerEmbedding.length}`);
     
     const fetch = (await import('node-fetch')).default;
-    const indexHost = 'https://adas-memory-qa-poc-rimyov4.svc.aped-4627-b74a.pinecone.io';
+    // Updated indexHost to reflect the new production index name.
+    // The unique ID (rimyov4) and domain part might change and needs to be verified from the Pinecone console for the 'adas-memory-qa-prod' index.
+    // For now, replacing the index name part of the string.
+    // const indexHost = 'https://adas-memory-qa-prod-rimyov4.svc.aped-4627-b74a.pinecone.io'; // POC indexHost
+    const indexHost = 'https://adas-memory-qa-prod-rimyov4.svc.aped-4627-b74a.pinecone.io'; // Production indexHost
     
     // Search for MOMENT photos using REST API
     console.log(`🔍 Searching for MOMENT photos using REST API...`);
@@ -161,19 +185,25 @@ async function getRelatedPhotos(answerText, answerId, apiKey) {
 export default async function handler(req, res) {
   console.log("--- Ada's Spark Search Handler ---");
 
-  // CORS Headers
-  const allowedOrigins = [
-    'https://adas-spark.org',
-    'https://www.adas-spark.org',
-    'http://localhost:8000'  // For local development
-  ];
+  // CORS Headers - Updated to include Vercel preview URLs
+const allowedOrigins = [
+  'https://adas-spark.org',
+  'https://www.adas-spark.org',
+  'http://localhost:8000',
+  'http://localhost:3000'
+];
 
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } else {
-    res.setHeader('Access-Control-Allow-Origin', 'https://adas-spark.org');
-  }
+const origin = req.headers.origin;
+
+// Check if origin matches allowed patterns
+const isAllowed = allowedOrigins.includes(origin) || 
+  (origin && origin.includes('joel-swensons-projects.vercel.app')); // Allow all your Vercel previews
+
+if (isAllowed) {
+  res.setHeader('Access-Control-Allow-Origin', origin);
+} else {
+  res.setHeader('Access-Control-Allow-Origin', 'https://adas-spark.org');
+}
 
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -206,7 +236,7 @@ export default async function handler(req, res) {
 
     // Query Q&A index using SDK (default namespace)
     const pinecone = new Pinecone({ apiKey });
-    const index = pinecone.index('adas-memory-qa-poc');
+    const index = pinecone.index('adas-memory-qa-prod'); // Updated index name
     
     const searchResponse = await index.query({
       vector: queryVector,
@@ -221,40 +251,74 @@ export default async function handler(req, res) {
     const results = await Promise.all(
       searchResponse.matches?.map(async (match) => {
         const metadata = match.metadata || {};
+        // Each match from Pinecone  represents a question.
+        // Metadata contains: question_text, category, and answers_json.
         
-        // Parse the answers_json string into actual objects
-        let answers = [];
+        let processedAnswers = [];
         if (metadata.answers_json) {
           try {
-            answers = JSON.parse(metadata.answers_json);
+            const answersFromMetadata = JSON.parse(metadata.answers_json);
             
-            // Add photos to each answer
-            for (let i = 0; i < answers.length; i++) {
-              console.log(`Getting photos for answer ${i + 1} of question: ${metadata.question_text}`);
-              answers[i].related_photos = await getRelatedPhotos(
-                answers[i].answer_text,
-                answers[i].answer_id,
-                apiKey
-              );
+            for (const answer of answersFromMetadata) {
+              // Parse the source arrays
+              const sourceTitles = parseSourceArray(answer.source_title);
+              const sourceUrls = parseSourceArray(answer.source_url);
+              const sourceDates = parseSourceArray(answer.source_date);
+              const sourceIds = parseSourceArray(answer.source_post_id);
+
+              //  DEBUG LOGS:
+              console.log('DEBUG - Raw source_title:', answer.source_title);
+              console.log('DEBUG - Parsed sourceTitles:', sourceTitles);
+              console.log('DEBUG - Raw source_url:', answer.source_url);
+              console.log('DEBUG - Parsed sourceUrls:', sourceUrls);
+
+              // Create sources array from the parsed data
+              const sources = [];
+              const maxSources = Math.max(sourceTitles.length, sourceUrls.length, sourceDates.length, sourceIds.length);
+
+              for (let i = 0; i < maxSources; i++) {
+                sources.push({
+                  id: sourceIds[i] || `source-${i}`,
+                  title: sourceTitles[i] || 'CaringBridge Post',
+                  url: sourceUrls[i] || '#',
+                  date: sourceDates[i] || answer.source_date,
+                  type: 'CaringBridge Post'
+                });
+              }
+
+              processedAnswers.push({
+                answer_id: answer.answer_id,
+                answer_text: answer.answer_text,
+                source_post_id: answer.source_post_id,
+                source_date: answer.source_date,
+                title: answer.source_title, // Keep for backward compatibility
+                url: answer.source_url,     // Keep for backward compatibility
+                sources: sources, // Now properly parsed
+                related_photos: await getRelatedPhotos(
+                  answer.answer_text,
+                  answer.answer_id,
+                  apiKey
+                )
+              });
             }
           } catch (error) {
-            console.error("Error parsing answers_json:", error);
-            answers = [];
+            console.error("Error parsing answers_json for question_id:", match.id, error);
+            // Leave processedAnswers as empty if parsing fails
           }
         }
         
         return {
-          question_id: metadata.question_id,
+          question_id: match.id, // The ID of the vector is the question_id
           question_text: metadata.question_text,
           category: metadata.category,
-          score: match.score,
-          answers: answers // Now includes related_photos for each answer
+          score: match.score, // This is the similarity score for this question
+          answers: processedAnswers // Array of all processed answers for this question
         };
       }) || []
     );
 
-    // Check similarity threshold
-    const SIMILARITY_THRESHOLD = 0.6;
+    // Check similarity threshold for the top matching question.
+    const SIMILARITY_THRESHOLD = 0.5;
     if (results.length === 0 || (results[0] && results[0].score < SIMILARITY_THRESHOLD)) {
       return res.status(200).json({
         results: [],

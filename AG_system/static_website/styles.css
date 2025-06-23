@@ -1025,3 +1025,117 @@ body.in-iframe .header,
 body.in-iframe .footer {
     display: none !important;
 }
+
+/* ===== SOURCE LIST & POPUP STYLES ===== */
+.sources-list {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f0f0f0;
+}
+
+.sources-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 0.75rem;
+}
+
+.sources-list ul {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.source-ref-button {
+    background-color: #eef2ff; /* Light indigo background */
+    color: #4338ca; /* Indigo text */
+    border: 1px solid #c7d2fe; /* Lighter indigo border */
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    line-height: 1; /* Ensure text is vertically centered */
+}
+
+.source-ref-button:hover,
+.source-ref-button:focus {
+    background-color: #e0e7ff; /* Slightly darker indigo background on hover */
+    border-color: #a5b4fc;
+    color: #3730a3;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(67, 56, 202, 0.2); /* Focus ring */
+}
+
+.source-popup {
+    position: absolute; /* Positioned by Vue using coordinates */
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 1rem;
+    z-index: 100; /* Ensure it's above other content */
+    min-width: 250px;
+    max-width: 350px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.source-popup-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.source-popup-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin: 0;
+}
+
+.source-popup-title a {
+    color: #4285f4;
+    text-decoration: none;
+}
+
+.source-popup-title a:hover {
+    text-decoration: underline;
+}
+
+.source-popup-type,
+.source-popup-date {
+    color: #555;
+    margin: 0;
+}
+
+.source-popup-close {
+    background-color: #f1f5f9; /* Light gray */
+    color: #475569; /* Darker gray text */
+    border: 1px solid #cbd5e1;
+    padding: 0.375rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    margin-top: 0.5rem;
+    align-self: flex-start; /* Align to the left */
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.source-popup-close i {
+    font-size: 0.75rem;
+}
+
+.source-popup-close:hover,
+.source-popup-close:focus {
+    background-color: #e2e8f0;
+    border-color: #94a3b8;
+    outline: none;
+}

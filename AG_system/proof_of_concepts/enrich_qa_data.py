@@ -3,6 +3,8 @@ import argparse
 import os
 from typing import Dict, List, Any, Optional
 
+# python enrich_qa_data.py generated_qa_pairs_combined_clean_20250603_214922.json /Users/joelswenson/Documents/Adas_spark/code_repo/github_repo__called_code/code/AG_system/scraping/scraped_data.json generated_qa_pairs_combined_clean_20250603_214922_enriched.json
+
 # Constant for the site ID, as discussed.
 # This is used to construct the source_url.
 CARINGBRIDGE_SITE_ID = "6f33ada9-525c-3ce3-be6f-34b647b78d2d"
@@ -360,8 +362,8 @@ def enrich_qa_data(qa_filepath: str, scraped_data_filepath: str, output_filepath
                             current_urls.append("")
 
                 # Add new enrichment fields only - original source_post_id field is preserved unchanged
-                answer["source_title"] = str(current_titles)
-                answer["source_url"] = str(current_urls)
+                answer["source_title"] = current_titles
+                answer["source_url"] = current_urls
                 
                 if found_sources > 0:
                     total_answers_enriched += 1
