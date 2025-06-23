@@ -14,10 +14,10 @@ This project is composed of several key systems:
 
 * **Static Frontend Search Interface:** A modern, responsive web interface for searching Ada's memories using semantic search.
     * For detailed information on the frontend, including features, setup, and deployment, please refer to the [Static Website README](./AG_system/static_website/README.md).
-    * **Backend System & Data Pipeline:** Handles search queries, generates vector embeddings (currently using Pinecone's `llama-text-embed-v2` model via `pinecone_QA_upload.py` for questions, the API uses the same model for on-the-fly answer embedding, and queries the Pinecone vector index (`adas-memory-qa-prod`). The system now supports enhanced metadata for answers, including source details like title, URL, date, and post ID, which are displayed on the frontend with source linking. The data pipeline involves scraping, processing, Q&A generation (potentially enriched by `AG_system/proof_of_concepts/enrich_qa_data.py`), quality control, and vector uploading.
+    * **Backend System & Data Pipeline:** Handles search queries, generates vector embeddings (currently using Pinecone's `llama-text-embed-v2` model via `pinecone_QA_upload.py` for questions, the API uses the same model for on-the-fly answer embedding, and queries the Pinecone vector index (`adas-memory-qa-prod`). The system now supports enhanced metadata for answers, including source details like title, URL, date, and post ID, which are displayed on the frontend with source linking. The data pipeline involves scraping, processing, Q&A generation (enriched by `AG_system/proof_of_concepts/enrich_qa_data.py`), quality control, and vector uploading.
     * Scraping: `AG_system/scraping/scrape.py`
     * Data Processing: `AG_system/scraping/update_authors_and_text.py`
-    * Q&A Enrichment (Potential): `AG_system/proof_of_concepts/enrich_qa_data.py`
+    * Q&A Enrichment: `AG_system/proof_of_concepts/enrich_qa_data.py`
 * **Contextual Photo Integration System:** A system to enrich Ada's Living Story by linking textual Q&A with contextually relevant images from Ada's life. This system aims to provide a richer, multimedia experience.
     *   For detailed information on its design, workflow, and current status, please refer to the [Contextual Photo Integration README](./AG_system/contextual_photo_integration/README.md).
     *   This component has been integrated into the main system.
