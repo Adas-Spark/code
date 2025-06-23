@@ -6,7 +6,7 @@ Reads enriched caption data and uploads selected caption types to Pinecone.
 USAGE EXAMPLES:
 ===============
 # Upload emotional and contextual captions to photo-captions namespace
-python upload_captions_to_pinecone.py --captions EMOTIONAL,CONTEXTUAL
+python scripts/upload_captions_to_pinecone.py --captions CONTEXTUAL,MOMENT # Used for POC and initial Prod
 
 # Upload just emotional captions with dry-run to see what would be uploaded
 python upload_captions_to_pinecone.py --captions EMOTIONAL --dry-run
@@ -29,7 +29,7 @@ COMMAND LINE OPTIONS:
                            Available: EMOTIONAL, MOMENT, CONTEXTUAL, STORY, CHARACTER
 --input-file FILE_PATH      Optional. Path to enrichment CSV. (default: lineage/multi_prompt_enrichment_output.csv)
 --lineage-file FILE_PATH    Optional. Path to complete lineage CSV. (default: lineage/complete_image_lineage.csv)
---index-name INDEX_NAME     Optional. Pinecone index name. (default: adas-memory-qa-poc)
+--index-name INDEX_NAME     Optional. Pinecone index name. (default: adas-memory-qa-prod)
 --namespace NAMESPACE       Optional. Pinecone namespace. (default: photo-captions)
 --dry-run                   Optional. Show what would be uploaded without actually uploading.
 --batch-size SIZE           Optional. Embedding batch size. (default: 90)

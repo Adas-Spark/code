@@ -45,10 +45,9 @@ def main():
     pc = Pinecone(api_key=api_key)
 
     # Define the input JSON file
-    input_json_file = '../EXAMPLE_generated_qa_pairs_combined_clean_20250603_214922_enriched.json'
+    input_json_file = 'generated_qa_pairs_combined_clean_20250603_214922_enriched.json'
     # Note: The script is in AG_system/proof_of_concepts/pincecone/
     # The data is in AG_system/proof_of_concepts/
-    # So the relative path is correct.
 
     # Load your JSON file
     print(f"Loading data from {input_json_file}...")
@@ -88,7 +87,7 @@ def main():
     index_name = "adas-memory-qa-prod"
 
     # Check if the index already exists and delete it if needed
-    # For production, you might want to update or skip this step.
+    # For production, we might want to update or skip this step.
     # For this script, we'll delete and recreate for a clean upload.
     if index_name in [index.name for index in pc.list_indexes()]:
         print(f"Deleting existing index: {index_name}...")
@@ -137,16 +136,27 @@ def main():
         # The text to be embedded is just the question
         texts_to_embed.append(question_text)
 
-        # Process answers to ensure all source fields are strings for JSON serialization
+        # Process answers while preserving array structure for source fields
         processed_answers = []
         for ans in question_block['answers']:
-            processed_ans = ans.copy() # Avoid modifying original data
-            processed_ans["source_post_id"] = str(ans.get("source_post_id", ""))
-            processed_ans["source_date"] = str(ans.get("source_date", ""))
-            processed_ans["source_title"] = str(ans.get("source_title", ""))
-            processed_ans["source_url"] = str(ans.get("source_url", ""))
+            processed_ans = ans.copy()
+            
+            # Handle source fields that might be arrays or single values
+            for field in ["source_post_id", "source_date", "source_title", "source_url"]:
+                value = ans.get(field, "")
+                
+                if isinstance(value, list):
+                    # If it's already a list, keep it as is
+                    processed_ans[field] = value
+                elif value:
+                    # If it's a non-empty string, keep it as is
+                    processed_ans[field] = value
+                else:
+                    # If it's empty or None, set to empty string
+                    processed_ans[field] = ""
+            
             processed_answers.append(processed_ans)
-
+            
         # Metadata will include the question text, category, and all answers (with their sources) as a JSON string.
         metadata = {
             "question_text": question_text,

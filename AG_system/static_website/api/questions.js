@@ -1,18 +1,24 @@
 // Create new file: api/questions.js
 export default async function handler(req, res) {
-  // Strict CORS - only allow your domain  
-  const allowedOrigins = [
-    'https://adas-spark.org',
-    'https://www.adas-spark.org',
-    'http://localhost:8000'  // For local development
-  ];
+// CORS Headers - Updated to include Vercel preview URLs
+const allowedOrigins = [
+  'https://adas-spark.org',
+  'https://www.adas-spark.org',
+  'http://localhost:8000',
+  'http://localhost:3000'
+];
 
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } else {
-    res.setHeader('Access-Control-Allow-Origin', 'https://adas-spark.org');
-  }
+const origin = req.headers.origin;
+
+// Check if origin matches allowed patterns
+const isAllowed = allowedOrigins.includes(origin) || 
+  (origin && origin.includes('joel-swensons-projects.vercel.app')); // Allow all your Vercel previews
+
+if (isAllowed) {
+  res.setHeader('Access-Control-Allow-Origin', origin);
+} else {
+  res.setHeader('Access-Control-Allow-Origin', 'https://adas-spark.org');
+}
   
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');

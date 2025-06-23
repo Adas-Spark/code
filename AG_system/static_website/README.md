@@ -408,6 +408,21 @@ The `index.html` file includes a meta tag to instruct browsers on how to handle 
 
 **Result**: This strikes a balance between performance (allowing caching) and ensuring users eventually receive updates (eventual consistency). It doesn't guarantee immediate updates for all users due to various layers of caching (browser, network, WP Engine's own caching), but it significantly improves the situation.
 
+**Better Solution**: Use industry standard cache busting to force the new page to reload:
+<!-- FIND THESE LINES IN YOUR index.html AND UPDATE THEM: -->
+
+<!-- OLD (around line 9): -->
+<link rel="stylesheet" href="styles.css">
+
+<!-- NEW: -->
+<link rel="stylesheet" href="styles.css?v=20250123">
+
+<!-- OLD (around line 165): -->
+<script src="app.js"></script>
+
+<!-- NEW: -->
+<script src="app.js?v=20250123"></script>
+
 ## Troubleshooting
 
 ### Mobile Caching Issues

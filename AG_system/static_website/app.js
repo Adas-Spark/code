@@ -1,28 +1,26 @@
+// ===== CONFIGURATION FLAG =====
+// Set to 1 for local testing, 0 for production or preview (e.g. 'vercel' with no flags)
+const IS_LOCAL_TESTING = 0;
+
 // ===== CONFIGURATION =====
-//FOR PRODUCTION
-///*
-const API_CONFIG = {
+const API_CONFIG = IS_LOCAL_TESTING ? {
+    // Local testing configuration
+    baseUrl: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? '/api'  // Use relative path for local testing
+        : 'https://memories.adas-spark.org/api',
+    endpoints: {
+        search: '/search',
+        questions: '/questions'
+    },
+    timeout: 30000
+} : {
+    // Production configuration
     baseUrl: 'https://memories.adas-spark.org/api',
     endpoints: {
         search: '/search'
     },
     timeout: 30000
 };
-//*/
-
-//FOR LOCAL TESTING
-/*
-const API_CONFIG = {
-    baseUrl: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? '/api'  // Use relative path for local testing
-        : 'https://memories.adas-spark.org/api',
-    endpoints: {
-        search: '/search',
-        questions: '/questions'  // Add this
-    },
-    timeout: 30000
-};
-*/
 
 // ===== UTILITY FUNCTIONS =====
 const utils = {
@@ -244,25 +242,21 @@ createApp({
     
             try {
                 console.log('Loading dynamic example questions...');
-                // For Production
-                ///*
-                const response = await fetch(`${API_CONFIG.baseUrl}/questions`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                //*/
-
-                // For Local Testing
-                /*
-                const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.questions || '/questions'}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                */
+                
+                // Use flag to determine which API endpoint to call
+                const response = IS_LOCAL_TESTING ? 
+                    await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.questions || '/questions'}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    }) : 
+                    await fetch(`${API_CONFIG.baseUrl}/questions`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
 
                 if (!response.ok) {
                     throw new Error(`Questions API failed: ${response.status}`);
@@ -311,12 +305,7 @@ createApp({
             this.lastSearchQuery = this.searchQuery;
 
             try {
-                // Simulate API call for development
                 const response = await apiService.searchMemories(this.searchQuery);
-
-                // Uncomment the line below when your API is ready
-                // const response = await apiService.searchMemories(this.searchQuery);
-
                 this.handleSearchSuccess(response);
 
             } catch (error) {
