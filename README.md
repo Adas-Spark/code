@@ -14,7 +14,7 @@ This project is composed of several key systems:
 
 * **Static Frontend Search Interface:** A modern, responsive web interface for searching Ada's memories using semantic search.
     * For detailed information on the frontend, including features, setup, and deployment, please refer to the [Static Website README](./AG_system/static_website/README.md).
-    * **Backend System & Data Pipeline:** Handles search queries, generates vector embeddings (currently using Pinecone's `text-embedding-ada-002` model via `pinecone_QA_upload.py` for questions, though the API uses a different model for on-the-fly answer embedding if needed), and queries the Pinecone vector index (`adas-memory-qa-prod`). The system now supports enhanced metadata for answers, including source details like title, URL, date, and post ID, which are displayed on the frontend with source linking. The data pipeline involves scraping, processing, Q&A generation (potentially enriched by `AG_system/proof_of_concepts/enrich_qa_data.py`), quality control, and vector uploading.
+    * **Backend System & Data Pipeline:** Handles search queries, generates vector embeddings (currently using Pinecone's `llama-text-embed-v2` model via `pinecone_QA_upload.py` for questions, the API uses the same model for on-the-fly answer embedding, and queries the Pinecone vector index (`adas-memory-qa-prod`). The system now supports enhanced metadata for answers, including source details like title, URL, date, and post ID, which are displayed on the frontend with source linking. The data pipeline involves scraping, processing, Q&A generation (potentially enriched by `AG_system/proof_of_concepts/enrich_qa_data.py`), quality control, and vector uploading.
     * Scraping: `AG_system/scraping/scrape.py`
     * Data Processing: `AG_system/scraping/update_authors_and_text.py`
     * Q&A Enrichment (Potential): `AG_system/proof_of_concepts/enrich_qa_data.py`
@@ -23,7 +23,6 @@ This project is composed of several key systems:
     *   This component has been integrated into the main system.
     * Q&A Generation & Merging: Manual Q&A generation followed by `AG_system/proof_of_concepts/QC_and_merge_jsons.ipynb` for merging and JSON validation.
     * Embedding QC & Vector DB Operations (Pinecone): `AG_system/proof_of_concepts/pincecone/visualization_analysis.ipynb` for embedding quality control, and `AG_system/proof_of_concepts/pincecone/pinecone_QA_upload.py` for uploading Q&A embeddings to Pinecone (index `adas-memory-qa-prod`). Photo caption embeddings are handled by `AG_system/contextual_photo_integration/scripts/upload_captions_to_pinecone.py` (typically to a different index or namespace, e.g., `adas-memory-qa-poc` and `photo-captions` namespace).
-    * **Suggestion for Future Enhancement:** To potentially optimize performance and reduce token usage, consider experimenting with sending thumbnails (instead of full-resolution images, where appropriate) to the image-to-text models used in the `AG_system/contextual_photo_integration/scripts/final_enrichment.py` script. This could be particularly relevant for generating brief descriptions or captions.
 
 **Important Note on Deployment:** Before uploading or making significant changes to the images or related data on your WP-engine instance (especially after processing data from this system), it is strongly recommended to perform a full backup of your WP-engine environment. It's also a good practice to take another backup after the changes have been successfully implemented.
 
@@ -41,10 +40,11 @@ This repository also contains a custom mail merge tool used for tasks such as em
 2.  `AG_system/scraping/update_authors_and_text.py` → corrected data files.
 3.  Manual Q&A generation (currently via Gemini app). Potentially followed by or integrated with `AG_system/proof_of_concepts/enrich_qa_data.py` for further data enrichment or transformation.
 4.  `AG_system/proof_of_concepts/QC_and_merge_jsons.ipynb` → Merges Q&A JSON files and performs data quality control and validation.
-5.  `AG_system/proof_of_concepts/pincecone/visualization_analysis.ipynb` → Quality control of embeddings.
-6.  `AG_system/proof_of_concepts/pincecone/pinecone_QA_upload.py` → Uploads Q&A embeddings (embedding only `question_text` and storing answers with new source fields like `source_title`, `source_url` in `answers_json` metadata) to Pinecone vector database (index `adas-memory-qa-prod`).
-7.  `AG_system/static_website/` → Vue.js frontend (deployed to WP Engine and embedded via iframe) calls API endpoints (Node.js serverless functions deployed on Vercel) for user queries. The frontend now displays source links and details for answers. `index.html` uses cache-busting for `app.js` and `styles.css`.
-8.  `AG_system/contextual_photo_integration/` scripts → Process Google Photos Takeout data, generate AI captions. `AG_system/contextual_photo_integration/scripts/upload_captions_to_pinecone.py` uploads photo caption embeddings to Pinecone (e.g., index `adas-memory-qa-poc`, namespace `photo-captions`).
+5.  `AG_system/proof_of_concepts/enrich_qa_data.py enriches dataset with source_title, source_url for downstream source attribution
+6.  `AG_system/proof_of_concepts/pincecone/visualization_analysis.ipynb` → Quality control of embeddings.
+7.  `AG_system/proof_of_concepts/pincecone/pinecone_QA_upload.py` → Uploads Q&A embeddings (embedding only `question_text` and storing answers with new source fields like `source_title`, `source_url` in `answers_json` metadata) to Pinecone vector database (index `adas-memory-qa-prod`).
+8.  `AG_system/static_website/` → Vue.js frontend (deployed to WP Engine and embedded via iframe) calls API endpoints (Node.js serverless functions deployed on Vercel) for user queries. The frontend now displays source links and details for answers. `index.html` uses cache-busting for `app.js` and `styles.css`.
+9.  `AG_system/contextual_photo_integration/` scripts → Process Google Photos Takeout data, generate AI captions. `AG_system/contextual_photo_integration/scripts/upload_captions_to_pinecone.py` uploads photo caption embeddings to Pinecone (e.g., index `adas-memory-qa-poc`, namespace `photo-captions`).
 
 **Key Technologies (Ada's Living Story):**
 * **Frontend:** Vue.js 3, modern CSS. Features include source linking and display. Cache busting is used for static assets.
