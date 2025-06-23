@@ -38,7 +38,7 @@ This repository also contains a custom mail merge tool used for tasks such as em
 **Data Flow:**
 1.  `AG_system/scraping/scrape.py` → `scraped_data.json` (raw CaringBridge data).
 2.  `AG_system/scraping/update_authors_and_text.py` → corrected data files.
-3.  Manual Q&A generation (currently via Gemini app). Potentially followed by or integrated with `AG_system/proof_of_concepts/enrich_qa_data.py` for further data enrichment or transformation.
+3.  Manual Q&A generation (currently via Gemini app).
 4.  `AG_system/proof_of_concepts/QC_and_merge_jsons.ipynb` → Merges Q&A JSON files and performs data quality control and validation.
 5.  `AG_system/proof_of_concepts/enrich_qa_data.py enriches dataset with source_title, source_url for downstream source attribution
 6.  `AG_system/proof_of_concepts/pincecone/visualization_analysis.ipynb` → Quality control of embeddings.
