@@ -11,54 +11,66 @@ Ada's Spark Memory Engine is a semantic search system that allows users to ask q
 
 ## Current Data Pipeline
 ```
-1. scrape.py → scraped_data.json (CaringBridge scraping with Selenium)
-2. update_authors_and_text.py → scraped_data_with_author_and_text_changes.json (fix authorship errors)
-3. Manual Q&A generation via Gemini app (chunked, ~50 questions per session)
-4. QC_and_merge_jsons.ipynb → merged Q&A validation
-5. pinecone_poc.ipynb → upload embeddings to Pinecone vector database
-6. static_website/ → Vue.js frontend for user queries
+1. AG_system/scraping/scrape.py → scraped_data.json (CaringBridge scraping with Selenium)
+2. AG_system/scraping/update_authors_and_text.py → scraped_data_with_author_and_text_changes.json (fix authorship errors)
+3. Manual Q&A generation via Gemini app (chunked, ~50 questions per session). Potentially use AG_system/proof_of_concepts/enrich_qa_data.py for further processing or structuring.
+4. AG_system/proof_of_concepts/QC_and_merge_jsons.ipynb → merged Q&A validation.
+5. AG_system/proof_of_concepts/pincecone/pinecone_QA_upload.py → Uploads embeddings to Pinecone vector database (index `adas-memory-qa-prod`). This script now embeds only `question_text` and stores answer details (including `source_title`, `source_url`, `source_date`, `source_post_id`) in `answers_json` metadata.
+6. AG_system/static_website/ → Vue.js frontend for user queries. Displays source links and details. Uses cache busting for app.js and styles.css.
 ```
 
 ## Immediate Plan (Next 1-2 Weeks)
-1. **Add source tracking** - Create `add_source_type.py` to add `source_type: "caringbridge_post"` to existing data
-2. **Update answer generation prompt** - Modify prompt to include `source_type`, `post_title`, and optional `media`/`media_type` fields in output JSON structure
-3. **Re-run pipeline with updated scraping output** - Previous scraping was incomplete (missing lots of comments and some reactions)
-4. **Frontend enhancements** - Display source attribution and randomize answer order
-6. **Document progress** - Create GitHub issue for source tracking implementation
+1. **Continue Q&A Generation & Enrichment**: Focus on increasing the number and quality of Q&A pairs.
+2. **Integrate `enrich_qa_data.py`**: Fully define and integrate the role of `enrich_qa_data.py` into the Q&A generation and processing workflow.
+3. **Re-run pipeline with updated scraping output** - Previous scraping was incomplete (missing lots of comments and some reactions).
+4. **Frontend enhancements** - Consider randomizing answer order if multiple answers are returned for a single question.
+5. **Document progress** - Continue updating documentation and GitHub issues.
 
-### Example Enhanced Metadata Structure
+### Example Enhanced Metadata Structure (as stored in Pinecone via `pinecone_QA_upload.py`)
+The `question_text` is embedded. The following structure is stored in the `answers_json` metadata field (as a JSON string):
 ```json
-{
-  "answers_json": "[{...answers...}]",
-  "category": "character",
-  "question_text": "What was Ada like as a person?",
-  "source_type": "caringbridge_post",
-  "post_title": "Ada's Amazing Day at the Hospital",
-  "media": null,
-  "media_type": null
-}
+[ // Array of answer objects
+  {
+    "answer_id": "unique_answer_id_1",
+    "answer_text": "This is the first part of the answer...",
+    "source_title": "Title of the First Source Document",
+    "source_url": "https://example.com/source1",
+    "source_date": "2023-01-15",
+    "source_post_id": "original_post_id_1"
+  },
+  {
+    "answer_id": "unique_answer_id_2",
+    "answer_text": "This is a subsequent part of the answer from another source...",
+    "source_title": "Title of the Second Source Document",
+    "source_url": "https://example.com/source2",
+    "source_date": "2023-01-16",
+    "source_post_id": "original_post_id_2"
+  }
+]
 ```
+Additional top-level metadata stored with the question embedding includes `category`, `question_text` (again, for retrieval), and potentially other fields like `source_type` (e.g., "caringbridge_post").
 
 ## Near-term Expansion Plans (Planned Future Corpuses)
 - Ada's Spark newsletters
 - Ada's Spark website content  
 - Community-submitted memories
-- Family photo captions (with associated images)
+- Family photo captions (with associated images) - *Pinecone setup for this is `adas-memory-qa-poc` index, `photo-captions` namespace.*
 - Media coverage (obituaries, magazine articles, etc. with document links)
 - Official documents and records
 
 ### High Priority: Contextual Photo Integration
-**Status**: The contextual photo integration system has been successfully merged and integrated. Core scripts and a detailed workflow for the photo integration pipeline are in place, covering data extraction from Google Takeout, local image processing (WebP conversion, thumbnail generation, dual MD5 tracking), WordPress hosting and URL management, and AI-driven caption generation. The pipeline is robust and ready for full execution or further testing.
-**Overview**: Dynamic photo serving system that matches user Q&A responses with relevant photos using semantic search. The system relies on a multi-stage processing pipeline to prepare images and generate rich metadata before AI enrichment and integration.
-- Embed the answer text (from the Q&A) on-the-fly using Pinecone
-- Search against pre-generated photo captions (focusing on emotions/moments or perhaps scene descriptions)
-- Serve relevant photos with AI-generated descriptions alongside text answers
+**Status**: The contextual photo integration system has been successfully merged and integrated. Core scripts and a detailed workflow for the photo integration pipeline are in place. The system uploads photo caption embeddings to the `adas-memory-qa-poc` Pinecone index in the `photo-captions` namespace.
+**Overview**: Dynamic photo serving system that matches user Q&A responses with relevant photos using semantic search.
+- Embed the answer text (from the Q&A) on-the-fly using the API's embedding model.
+- Search against pre-generated photo captions in Pinecone (index `adas-memory-qa-poc`, namespace `photo-captions`).
+- Serve relevant photos with AI-generated descriptions alongside text answers.
 **Key Phases & Scripts**:
-- Google Takeout preparation: `scripts/prepare_takeout_data.py`
-- Image processing & thumbnails: `scripts/process_downloaded_images.py`, `scripts/generate_thumbnails.py`
-- WordPress integration: `scripts/merge_wordpress_data.py`
-- AI captioning: `scripts/final_enrichment.py`
-**Detailed Plan**: See [README.md](/AG_system/contextual_photo_integration/README.md) for complete technical specification and implementation roadmap.
+- Google Takeout preparation: `AG_system/contextual_photo_integration/scripts/prepare_takeout_data.py`
+- Image processing & thumbnails: `AG_system/contextual_photo_integration/scripts/process_downloaded_images.py`, `AG_system/contextual_photo_integration/scripts/generate_thumbnails.py`
+- WordPress integration: `AG_system/contextual_photo_integration/scripts/merge_wordpress_data.py`
+- AI captioning: `AG_system/contextual_photo_integration/scripts/final_enrichment.py`
+- Pinecone upload for captions: `AG_system/contextual_photo_integration/scripts/upload_captions_to_pinecone.py`
+**Detailed Plan**: See [Contextual Photo Integration README](./AG_system/contextual_photo_integration/README.md) for complete technical specification and implementation roadmap.
 
 
 ## Technical Improvements & Quality Assurance Pipeline
@@ -75,6 +87,7 @@ Ada's Spark Memory Engine is a semantic search system that allows users to ask q
 - **Display improvements** - Show post titles that answers came from for better source attribution
 - **Random contextual photos** - Serve photos from CaringBridge associated with the sources that answers came from (maybe)
 - **URL optimization** - Set up adas-spark.org/memory-engine to redirect to adas-spark.org/adas-living-story (or keep memory-engine for dev)
+- **Frontend Cache Busting**: Implemented cache busting for `index.html` assets (`app.js`, `styles.css`) using URL parameters to ensure users receive the latest versions.
 
 ### Image Processing Pipeline
 - **Image caption generation** - Process CaringBridge and Google Photos using vision-language models (vertex with imagetext?)
@@ -108,7 +121,20 @@ Based on research needs identified, these question areas should be prioritized f
 - Did commenters discuss shared experiences with childhood illness?
 - What connections were revealed through shared experiences?
 
-## Recent Development Updates
+## Recent Development Updates (as of June 23, 2025)
+
+*   **Source Linking & Enhanced Metadata:**
+    *   The frontend (`index.html`, `app.js`) now displays source reference numbers and a popup with detailed source information (title, URL, date, post ID) for each answer.
+    *   The backend API (`api/search.js`) has been updated to parse and provide this new source information, which is stored in an `answers_json` field in Pinecone.
+    *   The Q&A upload script (`AG_system/proof_of_concepts/pincecone/pinecone_QA_upload.py`) was modified to:
+        *   Embed only the `question_text`.
+        *   Store answer details, including the new source fields (`source_title`, `source_url`, `source_date`, `source_post_id`), in the `answers_json` metadata.
+*   **Pinecone Q&A Index Update:**
+    *   The primary Pinecone index for Q&A data has been updated to `adas-memory-qa-prod`. Scripts interacting with this index have been updated accordingly.
+*   **Cache Busting for Frontend Assets:**
+    *   Implemented cache busting for `styles.css` and `app.js` in `index.html` by appending a version query string (e.g., `?v=TIMESTAMP_OR_VERSION`) to force browsers to download updated versions.
+*   **Addition of `enrich_qa_data.py`:**
+    *   The script `enrich_qa_data.py` (from the main branch) has been added to `AG_system/proof_of_concepts/`. Its specific role in the current Q&A pipeline is being integrated/evaluated.
 
 ### 5-22-2025 Meeting (Joel & Julio)
 **Key Decisions:**
@@ -117,12 +143,12 @@ Based on research needs identified, these question areas should be prioritized f
 - Focus on data pipeline completion before infrastructure changes
 
 **Current Workflow Confirmed:**
-1. Scraping → Processing → Q&A Generation → QC/Merge → Vector Upload → Frontend
+1. Scraping → Processing → Q&A Generation (potentially using `enrich_qa_data.py`) → QC/Merge → Vector Upload (to `adas-memory-qa-prod` via updated `pinecone_QA_upload.py`) → Frontend (with source linking and cache busting)
 2. Manual Q&A generation via Gemini app remains current approach
 3. Chunking strategy: ~50 questions per session for optimal LLM performance
 
 **Future Directions Identified:**
-- README.md improvements needed
+- README.md improvements needed (ongoing)
 - Image caption extraction for corpus expansion
 - Technical blog post for website (high-level + technical sections)
 - Consider making GitHub repository public (requires PII scanning and token removal)
@@ -130,6 +156,7 @@ Based on research needs identified, these question areas should be prioritized f
 
 ## Current Priority ✅ MILESTONE ACHIEVED
 **300+ Questions Generated!** - Successfully expanded the Q&A database from ~5 to 300+ questions, significantly improving user experience and search coverage.
+**Source Linking Implemented!** - Frontend and backend now support detailed source attribution for answers.
 
 **Next Phase Focus: Quality & User Experience** 
 1. **Quality assurance pipeline** - Implement post-generation validation and truth verification

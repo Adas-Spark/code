@@ -708,8 +708,8 @@ The `scripts/upload_captions_to_pinecone.py` script is responsible for this proc
 *   Reads enriched caption data from the output of `final_enrichment.py` (typically `lineage/multi_prompt_enrichment_output.csv`, configurable via `--input-file`).
 *   Merges this data with `lineage/complete_image_lineage.csv` (configurable via `--lineage-file`) to access essential information like WordPress URLs and original image details.
 *   Allows the user to specify which types of generated captions (e.g., `EMOTIONAL`, `CONTEXTUAL`, `STORY`) should be embedded and uploaded. This is controlled by the mandatory `--captions` argument, which accepts a comma-separated list.
-*   Generates vector embeddings for the selected captions using a text embedding model hosted by Pinecone (currently `text-embedding-004`, though this might vary).
-*   Uploads these embeddings to a specified Pinecone index (default: `adas-memory-qa-poc`) and namespace (default: `photo-captions`).
+*   Generates vector embeddings for the selected captions using a text embedding model (e.g., `text-embedding-ada-002` or similar, specified within the script or Pinecone client).
+*   Uploads these embeddings to a specified Pinecone index (default in script: `adas-memory-qa-poc`) and namespace (default in script: `photo-captions`). It's important to note that the main Q&A system uses a different index (`adas-memory-qa-prod`). Ensure the correct index is targeted for photo captions.
 *   Includes rich metadata with each vector. This metadata is crucial for filtering, context presentation, and linking back to the original image. It typically includes:
     *   WordPress URLs for the full-size image and thumbnail.
     *   The original filename and photo creation date.
