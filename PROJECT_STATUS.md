@@ -13,18 +13,18 @@ Ada's Spark Memory Engine is a semantic search system that allows users to ask q
 ```
 1. AG_system/scraping/scrape.py → scraped_data.json (CaringBridge scraping with Selenium)
 2. AG_system/scraping/update_authors_and_text.py → scraped_data_with_author_and_text_changes.json (fix authorship errors)
-3. Manual Q&A generation via Gemini app (chunked, ~50 questions per session). Potentially use AG_system/proof_of_concepts/enrich_qa_data.py for further processing or structuring.
+3. Manual Q&A generation via Gemini app (chunked, ~50 questions per session). 
 4. AG_system/proof_of_concepts/QC_and_merge_jsons.ipynb → merged Q&A validation.
+4.5 AG_system/proof_of_concepts/enrich_qa_data.py for adding source_title, source_url fields for source attribution.
 5. AG_system/proof_of_concepts/pincecone/pinecone_QA_upload.py → Uploads embeddings to Pinecone vector database (index `adas-memory-qa-prod`). This script now embeds only `question_text` and stores answer details (including `source_title`, `source_url`, `source_date`, `source_post_id`) in `answers_json` metadata.
 6. AG_system/static_website/ → Vue.js frontend for user queries. Displays source links and details. Uses cache busting for app.js and styles.css.
 ```
 
 ## Immediate Plan (Next 1-2 Weeks)
-1. **Continue Q&A Generation & Enrichment**: Focus on increasing the number and quality of Q&A pairs.
-2. **Integrate `enrich_qa_data.py`**: Fully define and integrate the role of `enrich_qa_data.py` into the Q&A generation and processing workflow.
-3. **Re-run pipeline with updated scraping output** - Previous scraping was incomplete (missing lots of comments and some reactions).
-4. **Frontend enhancements** - Consider randomizing answer order if multiple answers are returned for a single question.
-5. **Document progress** - Continue updating documentation and GitHub issues.
+1. **Continue Q&A Generation & Enrichment**: Focus on targeted enrichment of Q&A pairs (e.g. "who is Oliver").
+2. **Re-run pipeline with updated scraping output** - Previous scraping was incomplete (missing lots of comments and some reactions).
+3. **Frontend enhancements** - Consider randomizing answer order if multiple answers are returned for a single question. Consider using Moment for the display (would require adding new metadata to CONTEXTUAL captions that contain the MOMENT captions)
+4. **Document progress** - Continue updating documentation and GitHub issues.
 
 ### Example Enhanced Metadata Structure (as stored in Pinecone via `pinecone_QA_upload.py`)
 The `question_text` is embedded. The following structure is stored in the `answers_json` metadata field (as a JSON string):
@@ -62,7 +62,7 @@ Additional top-level metadata stored with the question embedding includes `categ
 **Status**: The contextual photo integration system has been successfully merged and integrated. Core scripts and a detailed workflow for the photo integration pipeline are in place. The system uploads photo caption embeddings to the `adas-memory-qa-poc` Pinecone index in the `photo-captions` namespace.
 **Overview**: Dynamic photo serving system that matches user Q&A responses with relevant photos using semantic search.
 - Embed the answer text (from the Q&A) on-the-fly using the API's embedding model.
-- Search against pre-generated photo captions in Pinecone (index `adas-memory-qa-poc`, namespace `photo-captions`).
+- Search against pre-generated photo captions in Pinecone (index `adas-memory-qa-prod`, namespace `photo-captions`).
 - Serve relevant photos with AI-generated descriptions alongside text answers.
 **Key Phases & Scripts**:
 - Google Takeout preparation: `AG_system/contextual_photo_integration/scripts/prepare_takeout_data.py`
