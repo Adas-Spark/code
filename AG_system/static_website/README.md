@@ -13,7 +13,7 @@ A modern, responsive web interface for searching Ada's memories using semantic s
 - **Decoupled API**: Communicates with separate Vercel backend for search operations
 - **Error Handling**: Comprehensive error states and user feedback for API interactions
 - **Mobile Responsive**: Optimized for all device sizes
-- **Performance**: Optimized loading with CDN resources, efficient rendering, and cache busting for static assets (`app.js`, `styles.css`).
+- **Performance**: Optimized loading with CDN resources, efficient rendering, and cache busting for static assets (`app.js`, `styles.css`), additionally index.html adds tags to styles.css and app.js (e.g. href="styles.css?v=20250623) to force user browsers to load the new assests.
 - **Embeddable**: Designed for embedding within WordPress sites via iframes
 
 ## Project Structure
@@ -401,7 +401,7 @@ const searchResponse = await index.query({ vector: queryVector }); // SDK for qu
 **Solution Implemented (Cache Busting via URL Parameters)**:
 To ensure users receive the latest versions of `app.js` and `styles.css` after updates, cache busting is implemented by appending a version query string to these file includes in `index.html`.
 
-**Example from `index.html` (illustrative, actual version may vary):**
+**Example from `index.html` (illustrative, actual version may vary, should use yearmonthday):**
 ```html
 <!-- In index.html -->
 <link rel="stylesheet" href="styles.css?v=20250623012250">
