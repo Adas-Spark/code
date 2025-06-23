@@ -7,12 +7,13 @@ A modern, responsive web interface for searching Ada's memories using semantic s
 ## Features
 
 - **Modern Design**: Clean, responsive interface following Ada's Spark branding
+- **Source Linking**: Displays source reference numbers for answers, with a popup showing source details (title, type, date, and URL if available).
 - **Accessibility**: WCAG AA compliant with proper ARIA labels, keyboard navigation, and screen reader support
 - **Vue.js Integration**: Interactive components with reactive search functionality
 - **Decoupled API**: Communicates with separate Vercel backend for search operations
 - **Error Handling**: Comprehensive error states and user feedback for API interactions
 - **Mobile Responsive**: Optimized for all device sizes
-- **Performance**: Optimized loading with CDN resources and efficient rendering
+- **Performance**: Optimized loading with CDN resources, efficient rendering, and cache busting for static assets (`app.js`, `styles.css`), additionally index.html adds tags to styles.css and app.js (e.g. href="styles.css?v=20250623) to force user browsers to load the new assests.
 - **Embeddable**: Designed for embedding within WordPress sites via iframes
 
 ## Project Structure
@@ -167,13 +168,16 @@ POST /api/search
             "question_text": "What was Ada like as a person?",
             "category": "character",
             "score": 0.95,
-            "answers": [
+            "answers": [ // This is the structure within the 'answers_json' metadata string, parsed by the frontend
                 {
-                    "answer_id": "Q1A1",
+                    "answer_id": "Q1A1", // Or similar unique identifier for the answer
                     "answer_text": "Ada was a beacon of unwavering spirit...",
-                    "source_post_id": "post-123",
-                    "source_date": "2023-05-15"
+                    "source_title": "Journal Entry Title",
+                    "source_url": "https://example.com/post-123",
+                    "source_date": "2023-05-15",
+                    "source_post_id": "post-123" // Or other original source identifier
                 }
+                // Potentially more answers if a question has multiple answer parts from different sources
             ]
         }
     ]
@@ -183,7 +187,7 @@ POST /api/search
 {
     "results": [],
     "message": "No similar questions found. Try rephrasing your question or click one of the example questions.",
-    "lowScore": true
+    "lowScore": true // Indicates that results were found but below similarity threshold
 }
 
 // Error response
@@ -394,43 +398,44 @@ const searchResponse = await index.query({ vector: queryVector }); // SDK for qu
 
 **Problem**: Mobile browsers (and desktop browsers sometimes) can aggressively cache static files like `app.js`, `styles.css`, and `index.html`. This means that after deploying updates to these files on WP Engine, users might continue to see an outdated version of the memory engine.
 
-**Solution Implemented**:
-The `index.html` file includes a meta tag to instruct browsers on how to handle caching:
+**Solution Implemented (Cache Busting via URL Parameters)**:
+To ensure users receive the latest versions of `app.js` and `styles.css` after updates, cache busting is implemented by appending a version query string to these file includes in `index.html`.
+
+**Example from `index.html` (illustrative, actual version may vary, should use yearmonthday):**
+```html
+<!-- In index.html -->
+<link rel="stylesheet" href="styles.css?v=20250623012250">
+...
+<script src="app.js?v=20250623012250"></script>
+```
+
+**How it Works**:
+- When `styles.css` or `app.js` is updated, the version number in the query string (e.g., `?v=TIMESTAMP_OR_VERSION`) in `index.html` is also updated.
+- Browsers treat URLs with different query strings as distinct files. So, `styles.css?v=1` and `styles.css?v=2` are considered different resources.
+- When `index.html` is loaded with the new version in the query string, the browser is forced to download the new version of the CSS/JS file, bypassing any previously cached older version.
+
+**Previous Approach (`must-revalidate`):**
+The `index.html` file also includes a meta tag:
 ```html
 <meta http-equiv="Cache-Control" content="must-revalidate">
 ```
+While `must-revalidate` instructs the browser to check with the server if a cached file is still valid, URL parameter cache busting is a more direct and often more reliable method to ensure new file versions are fetched immediately after an update to `index.html`. Both methods can coexist and complement each other.
 
-**How `must-revalidate` works**:
-- The browser is allowed to cache the file.
-- On subsequent visits, before using the cached version, the browser *must* check with the server (revalidate) to see if the file has changed.
-- If the file has changed on the server, the browser downloads the new version.
-- If the file has not changed, the server confirms this, and the browser uses its cached version (which is fast).
-
-**Result**: This strikes a balance between performance (allowing caching) and ensuring users eventually receive updates (eventual consistency). It doesn't guarantee immediate updates for all users due to various layers of caching (browser, network, WP Engine's own caching), but it significantly improves the situation.
-
-**Better Solution**: Use industry standard cache busting to force the new page to reload:
-<!-- FIND THESE LINES IN YOUR index.html AND UPDATE THEM: -->
-
-<!-- OLD (around line 9): -->
-<link rel="stylesheet" href="styles.css">
-
-<!-- NEW: -->
-<link rel="stylesheet" href="styles.css?v=20250123">
-
-<!-- OLD (around line 165): -->
-<script src="app.js"></script>
-
-<!-- NEW: -->
-<script src="app.js?v=20250123"></script>
+**Result**: This combination significantly improves the likelihood that users will see the latest changes promptly after deployment.
 
 ## Troubleshooting
 
 ### Mobile Caching Issues
 
--   **Symptom**: Mobile users see old version, desktop users see new version.
--   **Test**: Try incognito mode - if it shows new version, it's a caching issue.
--   **Solution**: Add `must-revalidate` meta tag (already implemented in `index.html`).
--   **Prevention**: Hard refresh after uploads (Ctrl+Shift+R or Cmd+Shift+R). Clear WP Engine cache if applicable.
+-   **Symptom**: Mobile users see an old version of the site, while desktop users (or incognito mode) see the new version.
+-   **Test**:
+    *   Try incognito/private browsing mode on the mobile device. If it shows the new version, it's a caching issue.
+    *   Check if the `index.html` being served has the updated query string parameters for `app.js` and `styles.css`.
+-   **Solution & Prevention**:
+    *   The implemented cache busting (e.g., `app.js?v=NEW_VERSION`) is the primary solution. Ensure `index.html` is updated on the server with new version strings for changed assets.
+    *   The `must-revalidate` meta tag helps but might not be sufficient alone for all caching scenarios.
+    *   After deploying new versions of `index.html`, `app.js`, or `styles.css`, clear any server-side caches (like WP Engine's cache).
+    *   Advise users to perform a hard refresh (Ctrl+Shift+R or Cmd+Shift+R on desktop; specific methods vary on mobile browsers) if they suspect they are seeing an old version.
 
 ### SFTP Upload Issues
 
