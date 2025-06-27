@@ -5,10 +5,13 @@ Generates multiple captions per image with optional Ada context and temporal awa
 
 USAGE EXAMPLES:
 ===============
-# NEW: Run analysis on thumbnails to save on cost/time
+# Used for initial prod
+caffeinate -i python scripts/final_enrichment.py --model gemini-2.5-flash --input-file lineage/complete_image_lineage.csv --ada-context --image-source thumbnail
+
+# Run analysis on thumbnails to save on cost/time
 python final_enrichment.py --model gemini-2.5-pro --ada-context --image-source thumbnail
 
-# NEW: Run on a hand-picked subset of images for testing
+# Run on a hand-picked subset of images for testing
 python final_enrichment.py --model gemini-2.5-pro --input-file lineage/my_test_images.csv
 
 # Basic run with default model and Ada context

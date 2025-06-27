@@ -259,9 +259,42 @@ python scripts/fix_lineage_MD5s.py
     ```
     *(Note: You must first edit the `final_enrichment.py` script to set your GCP `PROJECT_ID`. The `--model` argument is required. Optional arguments like `--input-file` and `--force-reprocess` can be used for more specific needs.)*
 
+ADDITIONALLY YOU NEED TO RUN: 
+```bash
+# Remove all ERROR records entirely - they are all problematic
+awk -F',' '$8 != "ERROR"' lineage/multi_prompt_enrichment_output____has_dirty_json.csv > lineage/multi_prompt_enrichment_output_no_errors_at_all.csv
+
+# Test this version
+python -c "
+import pandas as pd
+try:
+    df = pd.read_csv('lineage/multi_prompt_enrichment_output_no_errors_at_all.csv')
+    print(f'✅ Successfully loaded: {len(df)} rows, {len(df.columns)} columns')
+    print(f'MOMENT: {(df[\"prompt_name\"] == \"MOMENT\").sum()}')
+    print(f'CONTEXTUAL: {(df[\"prompt_name\"] == \"CONTEXTUAL\").sum()}')
+    print(f'ERROR: {(df[\"prompt_name\"] == \"ERROR\").sum()}')
+    print('🎉 File is clean!')
+except Exception as e:
+    print(f'❌ Still issues: {e}')
+"
+
+# Check results
+wc -l lineage/multi_prompt_enrichment_output_no_errors_at_all.csv
+grep -c '{' lineage/multi_prompt_enrichment_output_no_errors_at_all.csv # Note this can find brackets but if pandas says that its ok then it probably is
+
+# Keep the original file but rename it and rename the clean file as the original
+mv lineage/multi_prompt_enrichment_output.csv lineage/multi_prompt_enrichment_output____dirty_json_rows.csv
+mv lineage/multi_prompt_enrichment_output_no_errors_at_all.csv lineage/multi_prompt_enrichment_output.csv
+```
+This creates a clean version without JSON fragments. Vertex AI safety filters are blocking certain images and returning raw JSON error responses instead of clean text. final_enrichment.py is correctly detecting this as an error but then the JSON response object is bleeding into the CSV. For the long-term fix: final_enrichment.py should sanitize error messages before writing them to CSV, ensuring no newlines or JSON objects leak through.
+
+
 5.  **Phase 5 - Upload Captions to Pinecone:** Upload the generated image captions to your Pinecone vector database.
     ```bash
-    python scripts/upload_captions_to_pinecone.py --captions EMOTIONAL,CONTEXTUAL --namespace photo-captions
+    python scripts/upload_captions_to_pinecone.py \                                                               
+  --captions MOMENT,CONTEXTUAL \
+  --moment-namespace moment-captions \
+  --contextual-namespace contextual-captions
     ```
     *(Note: Ensure your `.env` file is configured with `PINECONE_API_KEY`. You can specify which caption types to upload using the `--captions` argument.)*
 ---
@@ -889,8 +922,14 @@ Metadata structure:
 
 **Implementation Strategy:**
 Create partitions of your data with namespaces using Pinecone namespaces to separate:
-- `photo-captions` namespace for image embeddings. The `scripts/upload_captions_to_pinecone.py` script is used to populate the `photo-captions` namespace with the chosen image caption embeddings and their metadata.
+- `photo-captions` namespace is the default for image embeddings. The `scripts/upload_captions_to_pinecone.py` script is used to populate the `photo-captions` namespace with the chosen image caption embeddings and their metadata. Alternatively, you can specific certain namespaces: 
+```python
+python scripts/upload_captions_to_pinecone.py \                                                               
+  --captions MOMENT,CONTEXTUAL \
+  --moment-namespace moment-captions \
+  --contextual-namespace contextual-captions
 - `qa-answers` namespace for text Q&A pairs.
+```
 - This allows independent scaling and management.
 
 **Next Steps:** Implement small-scale tests of each approach using your existing Q&A pairs and a subset of photos to evaluate user experience impact before choosing primary strategy.
@@ -965,6 +1004,12 @@ Run `python scripts/fix_lineage_MD5s.py` to upgrade existing v2.0 lineage files 
 - **CDN integration:** Automatic WordPress CDN configuration for global image delivery
 - **Database sharding:** Strategies for handling tens of thousands of images
 - **API rate limiting:** Intelligent throttling for AI caption generation at scale
+
+#### **Known Bugs To Address**
+- Vertex AI safety filters are blocking certain images and returning raw JSON error responses instead of clean text. final_enrichment.py is correctly detecting this as an error but then the JSON response object is bleeding into the CSV. For the long-term fix: final_enrichment.py should sanitize error messages before writing them to CSV, ensuring no newlines or JSON objects leak through. More formally:
+# - Strip newlines from error messages
+# - Escape quotes properly  
+# - Don't dump raw JSON objects into CSV fields
 
 ---
 
