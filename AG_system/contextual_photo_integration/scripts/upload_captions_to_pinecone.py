@@ -5,8 +5,14 @@ Reads enriched caption data and uploads selected caption types to Pinecone.
 
 USAGE EXAMPLES:
 ===============
-# Upload emotional and contextual captions to photo-captions namespace
+# Upload moment and contextual captions to photo-captions namespace
 python scripts/upload_captions_to_pinecone.py --captions CONTEXTUAL,MOMENT # Used for POC and initial Prod
+
+# Upload moment and contextual captions to separate namespaces since Pinecone filtering is buggy
+python scripts/upload_captions_to_pinecone.py \
+  --captions MOMENT,CONTEXTUAL \
+  --moment-namespace moment \
+  --contextual-namespace contextual
 
 # Upload just emotional captions with dry-run to see what would be uploaded
 python upload_captions_to_pinecone.py --captions EMOTIONAL --dry-run
