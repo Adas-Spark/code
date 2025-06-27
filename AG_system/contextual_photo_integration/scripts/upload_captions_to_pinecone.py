@@ -5,8 +5,14 @@ Reads enriched caption data and uploads selected caption types to Pinecone.
 
 USAGE EXAMPLES:
 ===============
-# Upload emotional and contextual captions to photo-captions namespace
+# Upload moment and contextual captions to photo-captions namespace
 python scripts/upload_captions_to_pinecone.py --captions CONTEXTUAL,MOMENT # Used for POC and initial Prod
+
+# Upload moment and contextual captions to separate namespaces since Pinecone filtering is buggy
+python scripts/upload_captions_to_pinecone.py \
+  --captions MOMENT,CONTEXTUAL \
+  --moment-namespace moment \
+  --contextual-namespace contextual
 
 # Upload just emotional captions with dry-run to see what would be uploaded
 python upload_captions_to_pinecone.py --captions EMOTIONAL --dry-run
@@ -266,56 +272,78 @@ def prepare_pinecone_records(merged_df, embeddings):
     print(f"Prepared {len(pinecone_records)} Pinecone records")
     return pinecone_records
 
-def upload_to_pinecone(records, pc, index_name, namespace, dry_run=False, batch_size=100):
+def upload_to_pinecone(records, pc, index_name, default_namespace, moment_namespace=None, contextual_namespace=None, dry_run=False, batch_size=100):
     """
-    Upload records to Pinecone index.
+    Upload records to Pinecone index, routing to specific namespaces if provided.
     
     Args:
         records: List of Pinecone record dictionaries
         pc: Pinecone client instance
         index_name: Name of Pinecone index
-        namespace: Namespace within the index
+        default_namespace: Default namespace for records not matching MOMENT or CONTEXTUAL
+        moment_namespace: Namespace for MOMENT captions
+        contextual_namespace: Namespace for CONTEXTUAL captions
         dry_run: If True, don't actually upload
         batch_size: Number of records per upload batch
     
     Returns:
         Number of successfully uploaded records
     """
-    if dry_run:
-        print(f"🧪 DRY RUN: Would upload {len(records)} records to index '{index_name}', namespace '{namespace}'")
-        
-        # Show a sample record
-        if records:
-            print("\nSample record structure:")
-            sample = records[0].copy()
-            # Truncate the vector for display
-            sample['values'] = f"[{len(sample['values'])} dimensions]"
-            print(json.dumps(sample, indent=2, default=str))
-        
+    if not records:
+        print("No records to upload.")
         return 0
+
+    # Group records by target namespace
+    records_by_namespace = {}
+    for record in records:
+        prompt_type = record['metadata'].get('prompt_type')
+        target_namespace = default_namespace
+        if prompt_type == 'MOMENT' and moment_namespace:
+            target_namespace = moment_namespace
+        elif prompt_type == 'CONTEXTUAL' and contextual_namespace:
+            target_namespace = contextual_namespace
+
+        if target_namespace not in records_by_namespace:
+            records_by_namespace[target_namespace] = []
+        records_by_namespace[target_namespace].append(record)
+
+    total_uploaded_count = 0
     
-    # Connect to the index
+    if dry_run:
+        print(f"🧪 DRY RUN: Preparing to process {len(records)} records for index '{index_name}'.")
+        for namespace, ns_records in records_by_namespace.items():
+            print(f"  ➡️  Would upload {len(ns_records)} records to namespace '{namespace}'")
+            if ns_records:
+                sample = ns_records[0].copy()
+                sample['values'] = f"[{len(sample['values'])} dimensions]" # Truncate vector
+                print(f"    Sample record for namespace '{namespace}':")
+                print(json.dumps(sample, indent=2, default=str))
+        return 0
+
     index = pc.Index(index_name)
     
-    print(f"Uploading {len(records)} records to Pinecone...")
-    print(f"  Index: {index_name}")
-    print(f"  Namespace: {namespace}")
-    
-    uploaded_count = 0
-    
-    # Upload in batches
-    for i in tqdm(range(0, len(records), batch_size)):
-        batch = records[i:i + batch_size]
-        
-        try:
-            index.upsert(vectors=batch, namespace=namespace)
-            uploaded_count += len(batch)
-        except Exception as e:
-            print(f"❌ Error uploading batch {i//batch_size + 1}: {e}")
+    for namespace, ns_records in records_by_namespace.items():
+        if not ns_records:
             continue
-    
-    print(f"✅ Successfully uploaded {uploaded_count} records")
-    return uploaded_count
+
+        print(f"Uploading {len(ns_records)} records to Pinecone index '{index_name}', namespace '{namespace}'...")
+
+        namespace_uploaded_count = 0
+        for i in tqdm(range(0, len(ns_records), batch_size), desc=f"Uploading to {namespace}"):
+            batch = ns_records[i:i + batch_size]
+            try:
+                index.upsert(vectors=batch, namespace=namespace)
+                namespace_uploaded_count += len(batch)
+            except Exception as e:
+                print(f"❌ Error uploading batch to namespace '{namespace}': {e}")
+                # Optionally, decide if you want to stop or continue with other namespaces/batches
+                continue
+
+        print(f"✅ Successfully uploaded {namespace_uploaded_count} records to namespace '{namespace}'")
+        total_uploaded_count += namespace_uploaded_count
+
+    print(f"✅ Total successfully uploaded records: {total_uploaded_count}")
+    return total_uploaded_count
 
 def parse_arguments():
     """Parse command line arguments"""
@@ -347,7 +375,15 @@ def parse_arguments():
     parser.add_argument('--namespace',
                         type=str,
                         default='photo-captions',
-                        help='Pinecone namespace (default: %(default)s)')
+                        help='Default Pinecone namespace (default: %(default)s)')
+
+    parser.add_argument('--moment-namespace',
+                        type=str,
+                        help='Pinecone namespace for MOMENT captions (overrides default)')
+
+    parser.add_argument('--contextual-namespace',
+                        type=str,
+                        help='Pinecone namespace for CONTEXTUAL captions (overrides default)')
     
     parser.add_argument('--dry-run',
                         action='store_true',
@@ -408,7 +444,11 @@ def main():
     print(f"📄 Lineage file: {args.lineage_file}")
     print(f"🏷️  Caption types: {selected_captions}")
     print(f"🗂️  Index: {args.index_name}")
-    print(f"📁 Namespace: {args.namespace}")
+    print(f"📁 Default Namespace: {args.namespace}")
+    if args.moment_namespace:
+        print(f"💅 MOMENT Namespace: {args.moment_namespace}")
+    if args.contextual_namespace:
+        print(f"🖼️  CONTEXTUAL Namespace: {args.contextual_namespace}")
     print(f"🤖 Embedding model: {model_name}")
     print(f"🧪 Dry run: {'Yes' if args.dry_run else 'No'}")
     print("-" * 80)
@@ -430,11 +470,14 @@ def main():
         
         # Step 4: Upload to Pinecone
         uploaded_count = upload_to_pinecone(
-            pinecone_records, 
-            pc, 
-            args.index_name, 
-            args.namespace, 
-            args.dry_run
+            pinecone_records,
+            pc,
+            args.index_name,
+            args.namespace,  # Default namespace
+            args.moment_namespace,
+            args.contextual_namespace,
+            args.dry_run,
+            args.batch_size
         )
         
         print("\n" + "=" * 80)
