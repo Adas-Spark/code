@@ -81,13 +81,16 @@ async function getRelatedPhotos(answerText, answerId, apiKey) {
         'Api-Key': apiKey
       },
       body: JSON.stringify({
-        namespace: 'photo-captions',
+        namespace: 'moment-captions', // Updated namespace
         vector: answerEmbedding,
-        topK: 10, // Get more to ensure we have enough after filtering
+        topK: 2, // We need up to 2 moment photos
         includeMetadata: true,
-        filter: {
-          prompt_type: { $eq: 'MOMENT' }
-        }
+        // Filter for prompt_type is no longer strictly needed if namespace is specific,
+        // but can be kept for safety or if the namespace might contain other types.
+        // For this change, we assume the namespace IS specific.
+        // filter: {
+        //   prompt_type: { $eq: 'MOMENT' }
+        // }
       })
     });
     
@@ -100,67 +103,81 @@ async function getRelatedPhotos(answerText, answerId, apiKey) {
         'Api-Key': apiKey
       },
       body: JSON.stringify({
-        namespace: 'photo-captions',
+        namespace: 'contextual-captions', // Updated namespace
         vector: answerEmbedding,
-        topK: 10, // Get more to ensure we have enough after filtering
+        topK: 2, // We need up to 2 contextual photos
         includeMetadata: true,
-        filter: {
-          prompt_type: { $eq: 'CONTEXTUAL' }
-        }
+        // filter: {
+        //   prompt_type: { $eq: 'CONTEXTUAL' }
+        // }
       })
     });
     
     if (!momentResponse.ok) {
-      throw new Error(`MOMENT photo query failed: ${momentResponse.status}`);
+      throw new Error(`MOMENT photo query failed: ${momentResponse.status} - ${await momentResponse.text()}`);
     }
     
     if (!contextualResponse.ok) {
-      throw new Error(`CONTEXTUAL photo query failed: ${contextualResponse.status}`);
+      throw new Error(`CONTEXTUAL photo query failed: ${contextualResponse.status} - ${await contextualResponse.text()}`);
     }
     
     const momentResults = await momentResponse.json();
     const contextualResults = await contextualResponse.json();
     
-    console.log(`📊 MOMENT results: ${momentResults.matches?.length || 0}`);
-    console.log(`📊 CONTEXTUAL results: ${contextualResults.matches?.length || 0}`);
+    console.log(`📊 MOMENT results from 'moment-captions': ${momentResults.matches?.length || 0}`);
+    console.log(`📊 CONTEXTUAL results from 'contextual-captions': ${contextualResults.matches?.length || 0}`);
     
-    // Process MOMENT photos (take top 2)
-    const momentPhotos = (momentResults.matches || [])
-      .slice(0, 2)
-      .map((match, index) => ({
-        photo_id: match.id,
-        thumbnail_url: match.metadata?.wordpress_thumbnail,
-        modal_url: match.metadata?.wordpress_url || match.metadata?.wordpress_thumbnail,
-        caption_moment: match.metadata?.caption_text,
-        relevance_score: match.score,
-        caption_type: 'MOMENT',
-        position: index
-      }));
+    const fetchedMomentPhotos = (momentResults.matches || []).map(match => ({
+      photo_id: match.id,
+      thumbnail_url: match.metadata?.wordpress_thumbnail,
+      modal_url: match.metadata?.wordpress_url || match.metadata?.wordpress_thumbnail,
+      caption_text: match.metadata?.caption_text, // Consistent naming
+      relevance_score: match.score,
+      caption_type: 'MOMENT' // Explicitly set type
+    }));
     
-    // Process CONTEXTUAL photos (take top 2)
-    const contextualPhotos = (contextualResults.matches || [])
-      .slice(0, 2)
-      .map((match, index) => ({
-        photo_id: match.id,
-        thumbnail_url: match.metadata?.wordpress_thumbnail,
-        modal_url: match.metadata?.wordpress_url || match.metadata?.wordpress_thumbnail,
-        caption_moment: match.metadata?.caption_text,
-        relevance_score: match.score,
-        caption_type: 'CONTEXTUAL',
-        position: index + 2
-      }));
+    const fetchedContextualPhotos = (contextualResults.matches || []).map(match => ({
+      photo_id: match.id,
+      thumbnail_url: match.metadata?.wordpress_thumbnail,
+      modal_url: match.metadata?.wordpress_url || match.metadata?.wordpress_thumbnail,
+      caption_text: match.metadata?.caption_text, // Consistent naming
+      relevance_score: match.score,
+      caption_type: 'CONTEXTUAL' // Explicitly set type
+    }));
+
+    const allPhotos = [];
+    // Desired order: CONTEXTUAL, MOMENT, CONTEXTUAL, MOMENT
+
+    // 1st photo: CONTEXTUAL
+    if (fetchedContextualPhotos.length > 0) {
+      const photo = fetchedContextualPhotos.shift();
+      allPhotos.push({ ...photo, position: 0, caption_moment: photo.caption_text });
+    }
+    // 2nd photo: MOMENT
+    if (fetchedMomentPhotos.length > 0) {
+      const photo = fetchedMomentPhotos.shift();
+      allPhotos.push({ ...photo, position: 1, caption_moment: photo.caption_text });
+    }
+    // 3rd photo: CONTEXTUAL
+    if (fetchedContextualPhotos.length > 0) {
+      const photo = fetchedContextualPhotos.shift();
+      allPhotos.push({ ...photo, position: 2, caption_moment: photo.caption_text });
+    }
+    // 4th photo: MOMENT
+    if (fetchedMomentPhotos.length > 0) {
+      const photo = fetchedMomentPhotos.shift();
+      allPhotos.push({ ...photo, position: 3, caption_moment: photo.caption_text });
+    }
     
-    console.log(`📊 Found ${momentPhotos.length} MOMENT photos, ${contextualPhotos.length} CONTEXTUAL photos`);
-    
-    const allPhotos = [...momentPhotos, ...contextualPhotos];
+    console.log(`📊 Assembled ${allPhotos.length} photos in CONTEXTUAL, MOMENT, CONTEXTUAL, MOMENT order.`);
     
     // If we don't have exactly 4 photos, let's see why
     if (allPhotos.length < 4) {
-      console.log(`⚠️  Only found ${allPhotos.length} photos instead of 4`);
-      console.log(`   MOMENT: ${momentPhotos.length}, CONTEXTUAL: ${contextualPhotos.length}`);
+      console.log(`⚠️  Only assembled ${allPhotos.length} photos. Target was 4.`);
+      console.log(`   Original fetched counts - MOMENT: ${momentResults.matches?.length || 0}, CONTEXTUAL: ${contextualResults.matches?.length || 0}`);
     }
     
-    console.log(`✅ Final result: ${allPhotos.length} photos (${momentPhotos.length} MOMENT, ${contextualPhotos.length} CONTEXTUAL)`);
+    console.log(`✅ Final result: ${allPhotos.length} photos processed.`);
     
     // Log sample photo for debugging
     if (allPhotos.length > 0) {
