@@ -508,9 +508,32 @@ def final_enrich_data(args):
 
         except Exception as e:  
             error_count += 1
-            error_message = f"ERROR: {str(e)}"
+            raw_error_message = str(e)
+
+            # Sanitize the error message
+            sanitized_error_message = raw_error_message.replace('\n', ' ').replace('\r', ' ')
+            # Check if the error message is a JSON string
+            if sanitized_error_message.strip().startswith('{') and sanitized_error_message.strip().endswith('}'):
+                try:
+                    # Attempt to parse JSON to extract a more specific message if available
+                    error_json = json.loads(sanitized_error_message.strip())
+                    if 'message' in error_json:
+                        sanitized_error_message = f"API Error: {error_json['message']}"
+                    elif 'error' in error_json and isinstance(error_json['error'], dict) and 'message' in error_json['error']:
+                        sanitized_error_message = f"API Error: {error_json['error']['message']}"
+                    else:
+                        # If no specific message field, use a generic message
+                        sanitized_error_message = "Blocked by API safety filters or other JSON error response."
+                except json.JSONDecodeError:
+                    # If it looks like JSON but doesn't parse, use a generic message
+                    sanitized_error_message = "Malformed JSON error response from API."
+
+            # Further ensure no problematic characters for CSV, though pandas usually handles quotes.
+            # This is a basic safeguard; pandas' to_csv is generally robust.
+            sanitized_error_message = sanitized_error_message.replace('"', "'")
+
             print(f"  ❌ [{index+1:3d}/{len(images_to_process)}] FAILED: {original_filename}")
-            print(f"       Error: {error_message}")
+            print(f"       Error: {sanitized_error_message}") # Log the sanitized message
             
             # Generate error record hash for consistency
             error_hash = generate_record_hash(original_filename, args.model, 'ERROR', processing_timestamp)
@@ -522,7 +545,7 @@ def final_enrich_data(args):
                 "model_used": args.model,
                 "total_tokens": 0, "prompt_tokens": 0, "candidates_tokens": 0,
                 "prompt_name": 'ERROR',
-                "prompt_answer": error_message,
+                "prompt_answer": sanitized_error_message, # Use the sanitized message
                 "photo_taken_time": 'N/A',
                 "temporal_context": 'N/A',
                 "ada_context_included": args.ada_context,

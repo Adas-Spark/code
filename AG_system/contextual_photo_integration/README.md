@@ -1006,10 +1006,41 @@ Run `python scripts/fix_lineage_MD5s.py` to upgrade existing v2.0 lineage files 
 - **API rate limiting:** Intelligent throttling for AI caption generation at scale
 
 #### **Known Bugs To Address**
-- Vertex AI safety filters are blocking certain images and returning raw JSON error responses instead of clean text. final_enrichment.py is correctly detecting this as an error but then the JSON response object is bleeding into the CSV. For the long-term fix: final_enrichment.py should sanitize error messages before writing them to CSV, ensuring no newlines or JSON objects leak through. More formally:
-# - Strip newlines from error messages
-# - Escape quotes properly  
-# - Don't dump raw JSON objects into CSV fields
+- **Vertex AI JSON Error Handling (FIXED):**
+    - **Issue:** Vertex AI safety filters were blocking certain images and returning raw JSON error responses instead of clean text. `final_enrichment.py` correctly detected this as an error, but the raw JSON response object was bleeding into the output CSV.
+    - **Fix Implemented:** `final_enrichment.py` has been updated to sanitize these error messages before writing them to the CSV. The script now attempts to parse the JSON error to extract a concise message, replaces newlines, and ensures the message is more CSV-friendly.
+    - **Further Testing Recommended:** This fix should handle the majority of cases, but it requires further testing in a production environment with a wide variety of images and potential API responses to ensure it gracefully handles all error types.
+    - **Previous Workaround (Reference Only):** The following workaround was previously used to clean the CSV. It should now only be necessary if the new fix in `final_enrichment.py` proves insufficient for certain edge cases encountered in production:
+        ```bash
+        # Remove all ERROR records entirely - they are all problematic
+        awk -F',' '$8 != "ERROR"' lineage/multi_prompt_enrichment_output____has_dirty_json.csv > lineage/multi_prompt_enrichment_output_no_errors_at_all.csv
+
+        # Test this version
+        python -c "
+        import pandas as pd
+        try:
+            df = pd.read_csv('lineage/multi_prompt_enrichment_output_no_errors_at_all.csv')
+            print(f'✅ Successfully loaded: {len(df)} rows, {len(df.columns)} columns')
+            print(f'MOMENT: {(df[\"prompt_name\"] == \"MOMENT\").sum()}')
+            print(f'CONTEXTUAL: {(df[\"prompt_name\"] == \"CONTEXTUAL\").sum()}')
+            print(f'ERROR: {(df[\"prompt_name\"] == \"ERROR\").sum()}')
+            print('🎉 File is clean!')
+        except Exception as e:
+            print(f'❌ Still issues: {e}')
+        "
+
+        # Check results
+        wc -l lineage/multi_prompt_enrichment_output_no_errors_at_all.csv
+        grep -c '{' lineage/multi_prompt_enrichment_output_no_errors_at_all.csv # Note this can find brackets but if pandas says that its ok then it probably is
+
+        # Keep the original file but rename it and rename the clean file as the original
+        mv lineage/multi_prompt_enrichment_output.csv lineage/multi_prompt_enrichment_output____dirty_json_rows.csv
+        mv lineage/multi_prompt_enrichment_output_no_errors_at_all.csv lineage/multi_prompt_enrichment_output.csv
+        ```
+        The goal of the fix in `final_enrichment.py` is to prevent the need for this manual cleanup by ensuring error messages are properly sanitized at the source. The formal requirements for the fix were:
+        # - Strip newlines from error messages
+        # - Escape quotes properly (pandas usually handles this, but basic sanitization added)
+        # - Don't dump raw JSON objects into CSV fields; extract a meaningful message or use a generic one.
 
 ---
 
